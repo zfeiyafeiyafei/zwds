@@ -1,0 +1,49 @@
+:root {
+  /* 纸质底色 + 墨色：传统命盘的暖调 */
+  --paper: #f4efe4;
+  --panel: #fbf8f0;
+  --ink: #2e2921;
+  --ink-soft: #6f675a;
+  --ink-faint: #a29781;
+  --line: #d9d0bc;
+  --line-strong: #b8ab8e;
+  --vermilion: #b3372a; /* 主星红 */
+  --vermilion-deep: #8c2318; /* 化忌加深 */
+  --accent: #2f5d50;
+  --badge-lu: #2e7d32;
+  --badge-quan: #7b3fae;
+  --badge-ke: #1a5fb4;
+  --badge-ji: #b3372a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 900px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family:
+    'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+  color: var(--ink);
+}

@@ -1,0 +1,18 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / 前端
+node_modules/
+frontend/dist/
+
+# Rust / Tauri
+desktop/src-tauri/target/
+
+# 本地数据
+data/*.sqlite
+
+# 系统
+.DS_Store

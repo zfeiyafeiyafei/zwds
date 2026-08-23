@@ -1,0 +1,556 @@
+{
+  "lunarDate": "一九九四年四月廿二",
+  "solarDate": "1994-6-1",
+  "decadal": {
+    "index": 9,
+    "name": "大限",
+    "heavenlyStem": "丁",
+    "earthlyBranch": "亥",
+    "palaceNames": [
+      "田宅",
+      "官禄",
+      "仆役",
+      "迁移",
+      "疾厄",
+      "财帛",
+      "子女",
+      "夫妻",
+      "兄弟",
+      "命宫",
+      "父母",
+      "福德"
+    ],
+    "mutagen": [
+      "太阴",
+      "天同",
+      "天机",
+      "巨门"
+    ],
+    "stars": [
+      [],
+      [],
+      [
+        {
+          "name": "运鸾",
+          "type": "flower",
+          "scope": "decadal"
+        }
+      ],
+      [
+        {
+          "name": "运曲",
+          "type": "soft",
+          "scope": "decadal"
+        },
+        {
+          "name": "运陀",
+          "type": "tough",
+          "scope": "decadal"
+        },
+        {
+          "name": "运马",
+          "type": "tianma",
+          "scope": "decadal"
+        }
+      ],
+      [
+        {
+          "name": "运禄",
+          "type": "lucun",
+          "scope": "decadal"
+        }
+      ],
+      [
+        {
+          "name": "运羊",
+          "type": "tough",
+          "scope": "decadal"
+        }
+      ],
+      [],
+      [
+        {
+          "name": "运钺",
+          "type": "soft",
+          "scope": "decadal"
+        },
+        {
+          "name": "运昌",
+          "type": "soft",
+          "scope": "decadal"
+        }
+      ],
+      [
+        {
+          "name": "运喜",
+          "type": "flower",
+          "scope": "decadal"
+        }
+      ],
+      [
+        {
+          "name": "运魁",
+          "type": "soft",
+          "scope": "decadal"
+        }
+      ],
+      [],
+      []
+    ]
+  },
+  "age": {
+    "index": 6,
+    "nominalAge": 5,
+    "name": "小限",
+    "heavenlyStem": "甲",
+    "earthlyBranch": "申",
+    "palaceNames": [
+      "迁移",
+      "疾厄",
+      "财帛",
+      "子女",
+      "夫妻",
+      "兄弟",
+      "命宫",
+      "父母",
+      "福德",
+      "田宅",
+      "官禄",
+      "仆役"
+    ],
+    "mutagen": [
+      "廉贞",
+      "破军",
+      "武曲",
+      "太阳"
+    ]
+  },
+  "yearly": {
+    "index": 8,
+    "name": "流年",
+    "heavenlyStem": "甲",
+    "earthlyBranch": "戌",
+    "palaceNames": [
+      "官禄",
+      "仆役",
+      "迁移",
+      "疾厄",
+      "财帛",
+      "子女",
+      "夫妻",
+      "兄弟",
+      "命宫",
+      "父母",
+      "福德",
+      "田宅"
+    ],
+    "mutagen": [
+      "廉贞",
+      "破军",
+      "武曲",
+      "太阳"
+    ],
+    "stars": [
+      [
+        {
+          "name": "流禄",
+          "type": "lucun",
+          "scope": "yearly"
+        }
+      ],
+      [
+        {
+          "name": "流羊",
+          "type": "tough",
+          "scope": "yearly"
+        }
+      ],
+      [],
+      [
+        {
+          "name": "流昌",
+          "type": "soft",
+          "scope": "yearly"
+        },
+        {
+          "name": "流鸾",
+          "type": "flower",
+          "scope": "yearly"
+        }
+      ],
+      [],
+      [
+        {
+          "name": "流钺",
+          "type": "soft",
+          "scope": "yearly"
+        }
+      ],
+      [
+        {
+          "name": "流马",
+          "type": "tianma",
+          "scope": "yearly"
+        }
+      ],
+      [
+        {
+          "name": "流曲",
+          "type": "soft",
+          "scope": "yearly"
+        }
+      ],
+      [],
+      [
+        {
+          "name": "流喜",
+          "type": "flower",
+          "scope": "yearly"
+        }
+      ],
+      [
+        {
+          "name": "年解",
+          "type": "helper",
+          "scope": "yearly"
+        }
+      ],
+      [
+        {
+          "name": "流魁",
+          "type": "soft",
+          "scope": "yearly"
+        },
+        {
+          "name": "流陀",
+          "type": "tough",
+          "scope": "yearly"
+        }
+      ]
+    ],
+    "yearlyDecStar": {
+      "suiqian12": [
+        "官符",
+        "小耗",
+        "大耗",
+        "龙德",
+        "白虎",
+        "天德",
+        "吊客",
+        "病符",
+        "岁建",
+        "晦气",
+        "丧门",
+        "贯索"
+      ],
+      "jiangqian12": [
+        "指背",
+        "咸池",
+        "月煞",
+        "亡神",
+        "将星",
+        "攀鞍",
+        "岁驿",
+        "息神",
+        "华盖",
+        "劫煞",
+        "灾煞",
+        "天煞"
+      ]
+    }
+  },
+  "monthly": {
+    "index": 2,
+    "name": "流月",
+    "heavenlyStem": "己",
+    "earthlyBranch": "巳",
+    "palaceNames": [
+      "夫妻",
+      "兄弟",
+      "命宫",
+      "父母",
+      "福德",
+      "田宅",
+      "官禄",
+      "仆役",
+      "迁移",
+      "疾厄",
+      "财帛",
+      "子女"
+    ],
+    "mutagen": [
+      "武曲",
+      "贪狼",
+      "天梁",
+      "文曲"
+    ],
+    "stars": [
+      [],
+      [],
+      [
+        {
+          "name": "月喜",
+          "type": "flower",
+          "scope": "monthly"
+        }
+      ],
+      [
+        {
+          "name": "月曲",
+          "type": "soft",
+          "scope": "monthly"
+        },
+        {
+          "name": "月陀",
+          "type": "tough",
+          "scope": "monthly"
+        }
+      ],
+      [
+        {
+          "name": "月禄",
+          "type": "lucun",
+          "scope": "monthly"
+        }
+      ],
+      [
+        {
+          "name": "月羊",
+          "type": "tough",
+          "scope": "monthly"
+        }
+      ],
+      [
+        {
+          "name": "月钺",
+          "type": "soft",
+          "scope": "monthly"
+        }
+      ],
+      [
+        {
+          "name": "月昌",
+          "type": "soft",
+          "scope": "monthly"
+        }
+      ],
+      [
+        {
+          "name": "月鸾",
+          "type": "flower",
+          "scope": "monthly"
+        }
+      ],
+      [
+        {
+          "name": "月马",
+          "type": "tianma",
+          "scope": "monthly"
+        }
+      ],
+      [
+        {
+          "name": "月魁",
+          "type": "soft",
+          "scope": "monthly"
+        }
+      ],
+      []
+    ]
+  },
+  "daily": {
+    "index": 11,
+    "name": "流日",
+    "heavenlyStem": "戊",
+    "earthlyBranch": "午",
+    "palaceNames": [
+      "父母",
+      "福德",
+      "田宅",
+      "官禄",
+      "仆役",
+      "迁移",
+      "疾厄",
+      "财帛",
+      "子女",
+      "夫妻",
+      "兄弟",
+      "命宫"
+    ],
+    "mutagen": [
+      "贪狼",
+      "太阴",
+      "右弼",
+      "天机"
+    ],
+    "stars": [
+      [],
+      [
+        {
+          "name": "日喜",
+          "type": "flower",
+          "scope": "daily"
+        }
+      ],
+      [
+        {
+          "name": "日陀",
+          "type": "tough",
+          "scope": "daily"
+        }
+      ],
+      [
+        {
+          "name": "日禄",
+          "type": "lucun",
+          "scope": "daily"
+        }
+      ],
+      [
+        {
+          "name": "日曲",
+          "type": "soft",
+          "scope": "daily"
+        },
+        {
+          "name": "日羊",
+          "type": "tough",
+          "scope": "daily"
+        }
+      ],
+      [
+        {
+          "name": "日钺",
+          "type": "soft",
+          "scope": "daily"
+        }
+      ],
+      [
+        {
+          "name": "日昌",
+          "type": "soft",
+          "scope": "daily"
+        },
+        {
+          "name": "日马",
+          "type": "tianma",
+          "scope": "daily"
+        }
+      ],
+      [
+        {
+          "name": "日鸾",
+          "type": "flower",
+          "scope": "daily"
+        }
+      ],
+      [],
+      [],
+      [],
+      [
+        {
+          "name": "日魁",
+          "type": "soft",
+          "scope": "daily"
+        }
+      ]
+    ]
+  },
+  "hourly": {
+    "index": 11,
+    "name": "流时",
+    "heavenlyStem": "壬",
+    "earthlyBranch": "子",
+    "palaceNames": [
+      "父母",
+      "福德",
+      "田宅",
+      "官禄",
+      "仆役",
+      "迁移",
+      "疾厄",
+      "财帛",
+      "子女",
+      "夫妻",
+      "兄弟",
+      "命宫"
+    ],
+    "mutagen": [
+      "天梁",
+      "紫微",
+      "左辅",
+      "武曲"
+    ],
+    "stars": [
+      [
+        {
+          "name": "时昌",
+          "type": "soft",
+          "scope": "hourly"
+        },
+        {
+          "name": "时马",
+          "type": "tianma",
+          "scope": "hourly"
+        }
+      ],
+      [
+        {
+          "name": "时魁",
+          "type": "soft",
+          "scope": "hourly"
+        },
+        {
+          "name": "时鸾",
+          "type": "flower",
+          "scope": "hourly"
+        }
+      ],
+      [],
+      [
+        {
+          "name": "时钺",
+          "type": "soft",
+          "scope": "hourly"
+        }
+      ],
+      [],
+      [],
+      [],
+      [
+        {
+          "name": "时喜",
+          "type": "flower",
+          "scope": "hourly"
+        }
+      ],
+      [
+        {
+          "name": "时陀",
+          "type": "tough",
+          "scope": "hourly"
+        }
+      ],
+      [
+        {
+          "name": "时禄",
+          "type": "lucun",
+          "scope": "hourly"
+        }
+      ],
+      [
+        {
+          "name": "时曲",
+          "type": "soft",
+          "scope": "hourly"
+        },
+        {
+          "name": "时羊",
+          "type": "tough",
+          "scope": "hourly"
+        }
+      ],
+      []
+    ]
+  }
+}
