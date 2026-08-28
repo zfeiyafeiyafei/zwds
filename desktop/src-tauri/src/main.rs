@@ -38,6 +38,17 @@ fn start_sidecar() -> Option<Child> {
 }
 
 fn main() {
+    // NVIDIA 专有驱动 + Wayland/Hyprland 下 WebKitGTK 修复：
+    // x11 后端避免 Wayland 协议错误；禁用 dmabuf/合成避免 webview 白屏
+    for (k, v) in [
+        ("GDK_BACKEND", "x11"),
+        ("WEBKIT_DISABLE_DMABUF_RENDERER", "1"),
+        ("WEBKIT_DISABLE_COMPOSITING_MODE", "1"),
+    ] {
+        if std::env::var_os(k).is_none() {
+            unsafe { std::env::set_var(k, v) };
+        }
+    }
     let app = tauri::Builder::default()
         // 导出保存对话框 / 写文件 / 剪贴板（权限见 capabilities/main.json）
         .plugin(tauri_plugin_dialog::init())
