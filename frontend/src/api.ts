@@ -51,12 +51,49 @@ export interface ChartResult {
   }
   palaces: Palace[]
   display: Record<string, unknown>
+  horoscope?: Horoscope
+  analysis?: { patterns: PatternMatch[] }
+}
+/** 格局分析命中（biz_requirement.md §4.3.1）。 */
+export interface PatternMatch {
+  name: string
+  strength: '强' | '中' | '弱' | string
+  evidence: string[]
+  condition: string
+  domain: string
+  explain: string
+}
+
+export interface HoroscopeDecadal {
+  index: number
+  branch: string
+  age_start: number
+  age_end: number
+  /** 运限十二宫 {地支: 宫名}（命宫起地支递减） */
+  palace_names?: Record<string, string>
+}
+
+/** 运限定位结果（POST /api/charts/calculate 的 horoscope 区块）。 */
+export interface Horoscope {
+  target_date: string
+  lunar_year: number
+  nominal_age: number
+  decadal: HoroscopeDecadal | null // null = 未上运
+  yearly: {
+    gan: string
+    zhi: string
+    mutagens: Record<string, Mutagen | string>
+    palace_names?: Record<string, string>
+  }
+  xiaoxian_branch: string
+  xiaoxian_palace_names?: Record<string, string>
 }
 
 export interface ChartSummary {
   chart_id: number
   person: string
   solar_datetime: string
+  hour_index?: number | null // 旧数据回填前可能缺失
   gender: string
   engine_version: string
 }
@@ -65,11 +102,17 @@ export interface BirthPayload {
   solar_date: string // YYYY-MM-DD
   hour_index: number // 0=早子时 … 11=亥时 12=晚子时
   gender: '男' | '女'
+  target_date?: string // 运限定位目标日，缺省今天
 }
 
 // 开发环境走 vite proxy（/api → 127.0.0.1:8765）；
 // Tauri 生产 webview 加载 tauri:// 自定义协议，必须用绝对地址访问本地 sidecar。
 const API_BASE = import.meta.env.DEV ? '' : 'http://127.0.0.1:8765'
+
+/** 是否运行在 Tauri 桌面 webview（WebKitGTK 不支持 <a download> 与 navigator.clipboard，需走插件）。 */
+function inTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}/api${path}`, {
@@ -79,6 +122,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     throw new Error(`请求失败 ${res.status}: ${await res.text()}`)
   }
+  if (res.status === 204) return undefined as T
   return (await res.json()) as T
 }
 
@@ -94,6 +138,19 @@ export function saveChart(
   return request('/charts', { method: 'POST', body: JSON.stringify(payload) })
 }
 
+/** 编辑已保存命盘：出生参数 + 姓名（整体重排覆盖，历史快照保留）。 */
+export function updateChart(
+  chartId: number,
+  payload: BirthPayload & { person_name: string },
+): Promise<{ chart_id: number; person: string }> {
+  return request(`/charts/${chartId}`, { method: 'PUT', body: JSON.stringify(payload) })
+}
+
+/** 删除已保存命盘。 */
+export function deleteChart(chartId: number): Promise<void> {
+  return request(`/charts/${chartId}`, { method: 'DELETE' })
+}
+
 /** 已保存命盘列表。 */
 export function listCharts(): Promise<ChartSummary[]> {
   return request('/charts')
@@ -102,4 +159,52 @@ export function listCharts(): Promise<ChartSummary[]> {
 /** 读取已保存命盘快照。 */
 export function getChart(chartId: number): Promise<ChartResult> {
   return request(`/charts/${chartId}`)
+}
+/** 导出命盘 JSON 快照文件：Tauri 走原生保存对话框，浏览器走 <a download> 下载。 */
+export async function exportChart(chartId: number, fallbackName: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/charts/${chartId}/export`)
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
+  const text = await res.text()
+  const m = (res.headers.get('content-disposition') ?? '').match(/filename\*=UTF-8''([^;]+)/)
+  const filename = m ? decodeURIComponent(m[1]) : `ziwei_${fallbackName}.json`
+
+  if (inTauri()) {
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    const { writeTextFile } = await import('@tauri-apps/plugin-fs')
+    const path = await save({
+      defaultPath: filename,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (!path) return // 用户取消
+    await writeTextFile(path, text)
+  } else {
+    const blob = new Blob([text], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+}
+
+/** 将命盘 JSON 数据复制到剪贴板（Tauri 走剪贴板插件，浏览器走 navigator.clipboard）。 */
+export async function copyChartJson(chart: ChartResult): Promise<void> {
+  const text = JSON.stringify(chart, null, 2)
+  if (inTauri()) {
+    const { writeText } = await import('@tauri-apps/plugin-clipboard-manager')
+    await writeText(text)
+  } else {
+    await navigator.clipboard.writeText(text)
+  }
+}
+
+/** 导入命盘 JSON 文件内容（服务端重排后落库）。 */
+export function importChart(
+  snapshot: unknown,
+  personName?: string,
+): Promise<{ chart_id: number; person: string }> {
+  return request('/charts/import', {
+    method: 'POST',
+    body: JSON.stringify({ snapshot, person_name: personName || '导入命盘' }),
+  })
 }

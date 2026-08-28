@@ -39,6 +39,10 @@ fn start_sidecar() -> Option<Child> {
 
 fn main() {
     let app = tauri::Builder::default()
+        // 导出保存对话框 / 写文件 / 剪贴板（权限见 capabilities/main.json）
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|_app| {
             *SIDECAR.lock() = start_sidecar();
             Ok(())

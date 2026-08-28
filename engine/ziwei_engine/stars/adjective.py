@@ -105,7 +105,7 @@ def place_adjective_stars(
     """返回 {杂曜名: 地支索引}（默认派 38 颗）。
 
     日系星输入 left/chang/qu 索引来自 stars.minor（§8.2）；
-    天伤=仆役宫、天使=疾厄宫（默认派固定，§8.5 location.ts:756）。
+    天伤=交友宫（旧称仆役宫）、天使=疾厄宫（默认派固定，§8.5 location.ts:756）。
     """
     hongluan = (3 - year_zhi) % 12  # 卯起子年逆数（location.ts:426）
     return {
@@ -148,7 +148,7 @@ def place_adjective_stars(
         "截路": JIELU_BY_GAN[year_gan % 5],
         "空亡": KONGWANG_BY_GAN[year_gan % 5],
         "旬空": xunkong_index(year_gan, year_zhi),
-        "天伤": (soul_branch + 5) % 12,  # 仆役宫
+        "天伤": (soul_branch + 5) % 12,  # 交友宫（旧称仆役宫）
         "天使": (soul_branch + 7) % 12,  # 疾厄宫
         "年解": NIANJIE_BY_ZHI[year_zhi],
     }

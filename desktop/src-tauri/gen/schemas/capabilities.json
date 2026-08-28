@@ -1,1 +1,1 @@
-{}
+{"main-capability":{"identifier":"main-capability","description":"主窗口：导出命盘（保存对话框 + 写文件）与复制 JSON 到剪贴板","local":true,"windows":["main"],"permissions":["core:default","dialog:allow-save","clipboard-manager:allow-write-text",{"identifier":"fs:allow-write-text-file","allow":[{"path":"**"}]}]}}

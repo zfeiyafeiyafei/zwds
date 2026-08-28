@@ -69,6 +69,7 @@ class Chart(Base, TimestampMixin):
     )
     engine_version: Mapped[Optional[str]] = mapped_column(String(32))
     solar_datetime: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    hour_index: Mapped[Optional[int]] = mapped_column(Integer)
     lunar_datetime: Mapped[Optional[str]] = mapped_column(String(64))
     longitude: Mapped[Optional[float]] = mapped_column(Float)
     timezone: Mapped[Optional[str]] = mapped_column(String(32))

@@ -8,9 +8,12 @@
 from __future__ import annotations
 
 from typing import Any
+from dataclasses import asdict
 
 from ..chart.natal import NatalChart
 from ..constants import EARTHLY_BRANCHES, HEAVENLY_STEMS
+from ..rules.horoscope import HoroscopeInfo
+from ..rules.patterns import PatternMatch
 
 ENGINE_VERSION = "0.1.0"
 
@@ -87,3 +90,37 @@ def chart_to_dict(chart: NatalChart, *, display: dict | None = None) -> dict[str
         "palaces": palaces,
         "display": display or dict(_DEFAULT_DISPLAY),
     }
+
+
+def horoscope_to_dict(h: HoroscopeInfo) -> dict[str, Any]:
+    """HoroscopeInfo → JSON 结构（biz_requirement.md §4.1.2-4.1.4）。
+
+    palace_names：运限十二宫 {地支: 宫名}，前端据此标注 大命/大兄…、流命…、小命…。
+    """
+    decadal = None
+    if h.decadal is not None:
+        decadal = {
+            "index": h.decadal.index,
+            "branch": EARTHLY_BRANCHES[h.decadal.palace_branch],
+            "age_start": h.decadal.age_start,
+            "age_end": h.decadal.age_end,
+            "palace_names": dict(h.decadal_palace_names),
+        }
+    return {
+        "target_date": h.target_date,
+        "lunar_year": h.lunar_year,
+        "nominal_age": h.nominal_age,
+        "decadal": decadal,
+        "yearly": {
+            "gan": HEAVENLY_STEMS[h.yearly_gan],
+            "zhi": EARTHLY_BRANCHES[h.yearly_zhi],
+            "mutagens": dict(h.yearly_mutagens),
+            "palace_names": dict(h.yearly_palace_names),
+        },
+        "xiaoxian_branch": EARTHLY_BRANCHES[h.xiaoxian_branch],
+        "xiaoxian_palace_names": dict(h.xiaoxian_palace_names),
+    }
+
+def patterns_to_dict(matches: list[PatternMatch]) -> list[dict[str, Any]]:
+    """格局识别结果 → JSON 数组。"""
+    return [asdict(m) for m in matches]

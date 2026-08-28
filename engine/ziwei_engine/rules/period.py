@@ -32,18 +32,6 @@ class Decadal:
     age_end: int
 
 
-@dataclass(frozen=True)
-class Horoscope:
-    """某目标年的运限定位结果。"""
-
-    nominal_age: int  # 虚岁
-    decadal: Decadal
-    yearly_branch: int  # 流年命宫地支（= 流年支）
-    yearly_gan: int
-    yearly_zhi: int
-    xiaoxian_branch: int
-
-
 def is_yang_year(year_gan: int) -> bool:
     return year_gan % 2 == 0  # 甲丙戊庚壬为阳
 

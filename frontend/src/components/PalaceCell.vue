@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Palace, Star } from '../api'
+import type { PeriodTag } from '../chartText'
 
-defineProps<{ palace: Palace; selected?: boolean }>()
+defineProps<{ palace: Palace; selected?: boolean ; tags?: PeriodTag[]; }>()
 
 const emit = defineEmits<{
   select: [branch: string]
@@ -33,6 +34,11 @@ function mutagenClass(star: Star): string {
       </span>
       <span class="palace-ganzhi">{{ palace.stem }}{{ palace.branch }}</span>
     </header>
+    <div v-if="tags?.length" class="period-tags">
+      <i v-for="t in tags" :key="t.label" class="period-tag" :class="[t.kind, { filled: t.filled }]">{{
+        t.label
+      }}</i>
+    </div>
 
     <section class="stars major">
       <span
@@ -69,7 +75,7 @@ function mutagenClass(star: Star): string {
   flex-direction: column;
   gap: 4px;
   padding: 6px 8px;
-  min-height: 148px;
+  min-height: 0; /* 高度由宫格轨道（正方形）决定 */
   background: var(--panel);
   cursor: pointer;
 }
@@ -191,5 +197,51 @@ function mutagenClass(star: Star): string {
   color: var(--ink-faint);
   text-align: right;
   word-break: break-all;
+}
+.period-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.period-tag {
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 0 5px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.period-tag.decadal {
+  color: var(--accent);
+}
+
+.period-tag.yearly {
+  color: var(--vermilion);
+}
+
+.period-tag.xiaoxian {
+  color: var(--badge-quan);
+}
+
+/* 运限十二宫实心徽标：三系各自成色（大限绿 / 流年红 / 小限紫）。
+   必须位于上方配色规则之后，同特异性下保证文字色生效。 */
+.period-tag.filled {
+  border-color: transparent;
+  color: #f8f5ec;
+}
+
+.period-tag.filled.decadal {
+  background: var(--accent);
+}
+
+.period-tag.filled.yearly {
+  background: var(--vermilion);
+}
+
+.period-tag.filled.xiaoxian {
+  background: var(--badge-quan);
 }
 </style>

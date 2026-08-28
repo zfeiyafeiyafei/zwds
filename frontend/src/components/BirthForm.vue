@@ -2,27 +2,12 @@
 import { reactive, ref } from 'vue'
 import { calculate, saveChart } from '../api'
 import type { BirthPayload, ChartResult } from '../api'
+import { HOURS } from '../hours'
 
 const emit = defineEmits<{
-  calculated: [chart: ChartResult, personName: string]
+  calculated: [chart: ChartResult, personName: string, payload: BirthPayload]
   saved: []
 }>()
-
-const HOURS = [
-  { index: 0, label: '早子时 00:00-01:00' },
-  { index: 1, label: '丑时 01:00-03:00' },
-  { index: 2, label: '寅时 03:00-05:00' },
-  { index: 3, label: '卯时 05:00-07:00' },
-  { index: 4, label: '辰时 07:00-09:00' },
-  { index: 5, label: '巳时 09:00-11:00' },
-  { index: 6, label: '午时 11:00-13:00' },
-  { index: 7, label: '未时 13:00-15:00' },
-  { index: 8, label: '申时 15:00-17:00' },
-  { index: 9, label: '酉时 17:00-19:00' },
-  { index: 10, label: '戌时 19:00-21:00' },
-  { index: 11, label: '亥时 21:00-23:00' },
-  { index: 12, label: '晚子时 23:00-24:00' },
-]
 
 const form = reactive<BirthPayload & { person_name: string }>({
   person_name: '',
@@ -42,8 +27,9 @@ async function onCalculate() {
   busy.value = true
   error.value = ''
   try {
-    const chart = await calculate(payload())
-    emit('calculated', chart, form.person_name.trim())
+    const p = payload()
+    const chart = await calculate(p)
+    emit('calculated', chart, form.person_name.trim(), p)
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -56,9 +42,10 @@ async function onSave() {
   error.value = ''
   try {
     const name = form.person_name.trim()
-    const chart = await calculate(payload())
-    await saveChart(name ? { ...payload(), person_name: name } : payload())
-    emit('calculated', chart, name)
+    const p = payload()
+    const chart = await calculate(p)
+    await saveChart(name ? { ...p, person_name: name } : p)
+    emit('calculated', chart, name, p)
     emit('saved')
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)

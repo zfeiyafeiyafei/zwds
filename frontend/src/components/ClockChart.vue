@@ -8,19 +8,22 @@
  *   因此 12 宫位节点全部归组于该 <g> 内；中心信息盘独立成 <g class="center-disc">，不随环转动。
  *
  * 几何参数（1280×860 视口整盘无滚动）：
- * - viewBox 780×780，12 个正圆节点半径 r=75，圆心等距落在 R=310 的圆周上（30° 均分）
+ * - viewBox 980×888，12 个正圆节点半径 r=75，圆心等距落在 R=310 的圆周上（30° 均分）
+ * - 运限徽标：顶部宫位叠于圆上方；最左（辰卯寅）/最右（申酉戌）三宫置于圆圈外侧竖排
  * - 不重叠约束：相邻中心距 2·R·sin15° ≈ 160.4，2r=150，缝隙 ≈10.4px ≥ 4px ✓
  * - 视口约束：总直径 2(R+r)=770 ≤ 790 ✓
  * - 节点内最长行（杂曜/小限）允许少量溢出圆边界（用户确认），不再为此缩字号
  */
 import { computed } from 'vue'
-import type { ChartResult, Palace, Star } from '../api'
-import { hourLabel, lunarLabel, relationEdges } from '../chartText'
+import type { ChartResult, Horoscope, Palace, Star } from '../api'
+import { hourLabel, lunarLabel, periodTags, relationEdges } from '../chartText'
+import type { PeriodTag } from '../chartText'
 
 const props = defineProps<{
   chart: ChartResult
   personName?: string
   selectedBranch?: string | null
+  horoscope?: Horoscope | null
 }>()
 
 const emit = defineEmits<{
@@ -89,6 +92,55 @@ interface RingNode {
   adj: string[]
   footerY: number
   agesText: string
+  pills: PillLayout[]
+}
+
+/** 徽标方位：顶部宫位徽标叠在圆上方；最左（辰卯寅）/最右（申酉戌）三宫徽标置于圆圈外侧。 */
+type PillSide = 'top' | 'left' | 'right'
+
+// 与 CLOCK_ORDER 一一对应（午=0 … 巳=11）
+const PILL_SIDES: PillSide[] = [
+  'top', // 午
+  'top', // 未
+  'right', // 申
+  'right', // 酉
+  'right', // 戌
+  'top', // 亥
+  'top', // 子
+  'top', // 丑
+  'left', // 寅
+  'left', // 卯
+  'left', // 辰
+  'top', // 巳
+]
+
+interface PillLayout {
+  tag: PeriodTag
+  cx: number
+  cy: number
+  w: number
+}
+
+/** 徽标宽度：CJK 按字宽 10、半角按 6 估，前后各留 6px 内边距。 */
+function pillWidth(label: string): number {
+  let w = 0
+  for (const ch of label) w += /[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/.test(ch) ? 10 : 6
+  return w + 12
+}
+
+function layoutPills(tags: PeriodTag[], side: PillSide): PillLayout[] {
+  const n = tags.length
+  return tags.map((tag, ti) => {
+    const w = pillWidth(tag.label)
+    if (side === 'top') {
+      return { tag, cx: 0, cy: -(NODE_R + 15 + ti * 17), w }
+    }
+    // 侧位：徽标竖排在圆圈外侧，整体相对圆心垂直居中；cx = 徽标中心
+    const cy = (ti - (n - 1) / 2) * 17
+    return side === 'left'
+      ? { tag, cx: -(NODE_R + 12) - w / 2, cy, w }
+      : { tag, cx: NODE_R + 12 + w / 2, cy, w }
+  })
 }
 
 const nodes = computed<RingNode[]>(() =>
@@ -105,9 +157,12 @@ const nodes = computed<RingNode[]>(() =>
       adj,
       footerY: adj.length > 1 ? 37 : 31,
       agesText: palace.ages.join(','),
+      pills: layoutPills(tagMap.value[palace.branch] ?? [], PILL_SIDES[idx]),
     }
   }),
 )
+
+const tagMap = computed(() => periodTags(props.horoscope))
 
 function mutagenFill(star: Star): string {
   return MUTAGEN_FILL[star.mutagen ?? ''] ?? 'var(--ink-faint)'
@@ -125,6 +180,16 @@ const relationSegs = computed(() => {
   })
 })
 
+/** 当前运限摘要行（中心信息盘）。 */
+const periodLine = computed(() => {
+  const h = props.horoscope
+  if (!h) return ''
+  const dec = h.decadal
+    ? `大限 ${h.decadal.branch}宫 ${h.decadal.age_start}~${h.decadal.age_end}`
+    : '未上运'
+  return `虚岁 ${h.nominal_age} · ${dec} · 流年 ${h.yearly.gan}${h.yearly.zhi}`
+})
+
 const infoLines = computed(() => {
   const c = props.chart
   return [
@@ -136,12 +201,13 @@ const infoLines = computed(() => {
     `五行局 ${c.meta.five_elements_class}`,
     `命主/身主 ${c.meta.soul} / ${c.meta.body}`,
     `生肖 ${c.calendar.zodiac}`,
+    ...(periodLine.value ? [periodLine.value] : []),
   ]
 })
 </script>
 
 <template>
-  <svg class="clock-chart" viewBox="0 0 780 780" role="img" aria-label="紫微斗数时钟圆盘命盘">
+  <svg class="clock-chart" viewBox="-100 -78 980 888" role="img" aria-label="紫微斗数时钟圆盘命盘">
     <g class="relation-lines">
       <line
         v-for="(seg, i) in relationSegs"
@@ -166,6 +232,27 @@ const infoLines = computed(() => {
           class="node-circle"
           :class="{ soul: n.palace.name === '命宫', selected: selectedBranch === n.palace.branch }"
         />
+        <g v-for="(p, pi) in n.pills" :key="p.tag.label + pi" class="node-period">
+          <rect
+            :x="p.cx - p.w / 2"
+            :y="p.cy - 8.5"
+            :width="p.w"
+            height="17"
+            rx="8.5"
+            class="period-pill"
+            :class="[p.tag.kind, { filled: p.tag.filled }]"
+          />
+          <text
+            :x="p.cx"
+            :y="p.cy"
+            text-anchor="middle"
+            dominant-baseline="central"
+            class="period-pill-text"
+            :class="[p.tag.kind, { filled: p.tag.filled }]"
+          >
+            {{ p.tag.label }}
+          </text>
+        </g>
 
         <text y="-48" class="node-name" :class="{ bold: n.palace.name === '命宫' }">
           {{ n.palace.name }}
@@ -255,8 +342,8 @@ const infoLines = computed(() => {
 .clock-chart {
   display: block;
   width: 100%;
-  /* 保持 1:1 比例的同时钳制尺寸，1280×860 视口整盘无滚动 */
-  max-width: calc(100vh - 132px);
+  /* 保持比例的同时钳制尺寸；viewBox 980×888（顶部 + 左右为运限徽标留白） */
+  max-width: calc((100vh - 132px) * 980 / 888);
   margin: 0 auto;
   height: auto;
   background: var(--paper);
@@ -401,5 +488,57 @@ const infoLines = computed(() => {
   font-size: 9px;
   fill: var(--ink-faint);
   text-anchor: middle;
+}
+.period-pill {
+  fill: var(--panel);
+  stroke-width: 1.2;
+}
+
+.period-pill.decadal {
+  stroke: var(--accent);
+}
+
+.period-pill.yearly {
+  stroke: var(--vermilion);
+}
+
+.period-pill.xiaoxian {
+  stroke: var(--badge-quan);
+}
+
+.period-pill-text {
+  font-size: 10px;
+}
+
+.period-pill-text.decadal {
+  fill: var(--accent);
+}
+
+.period-pill-text.yearly {
+  fill: var(--vermilion);
+}
+
+.period-pill-text.xiaoxian {
+  fill: var(--badge-quan);
+}
+
+/* 运限十二宫实心徽标：三系各自成色（大限绿 / 流年红 / 小限紫） */
+.period-pill.filled.decadal {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.period-pill.filled.yearly {
+  fill: var(--vermilion);
+  stroke: var(--vermilion);
+}
+
+.period-pill.filled.xiaoxian {
+  fill: var(--badge-quan);
+  stroke: var(--badge-quan);
+}
+
+.period-pill-text.filled {
+  fill: #f8f5ec;
 }
 </style>

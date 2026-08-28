@@ -31,3 +31,76 @@ export function relationEdges(branch: string): Array<[string, string]> {
     [branch, opposite],
   ]
 }
+
+export type PeriodKind = 'decadal' | 'yearly' | 'xiaoxian'
+
+export interface PeriodTag {
+  label: string
+  kind: PeriodKind
+  /** 实心彩色徽标（运限十二宫标注 大命/流兄/小官…） */
+  filled?: boolean
+}
+
+/** 运限十二宫短名：与引擎 DERIVED_PALACE_NAMES 一一对应。 */
+const DERIVED_FULL = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '官禄', '田宅', '福德', '父母']
+const DERIVED_SHORT = ['命', '兄', '夫', '子', '财', '疾', '迁', '友', '官', '田', '福', '父']
+
+function shortOf(name: string): string {
+  const i = DERIVED_FULL.indexOf(name)
+  return i >= 0 ? DERIVED_SHORT[i] : ''
+}
+
+/**
+ * 运限标注：每宫三系徽标（大限/流年/小限），随目标日期整体重排。
+ * - 十二宫各得一枚实心徽标：大命/大兄…、流命/流兄…、小命/小兄…
+ * - 命宫位徽标合并原信息：大命 45~54、流命 丙午年
+ * 无 horoscope（旧快照）时返回空表。
+ */
+export function periodTags(
+  horoscope: ChartResult['horoscope'] | undefined | null,
+): Record<string, PeriodTag[]> {
+  const out: Record<string, PeriodTag[]> = {}
+  const push = (branch: string, tag: PeriodTag) => {
+    ;(out[branch] ??= []).push(tag)
+  }
+  if (!horoscope) return out
+
+  const emit = (
+    names: Record<string, string> | undefined,
+    prefix: string,
+    kind: PeriodKind,
+    baseText?: (branch: string) => string | null,
+  ) => {
+    if (!names) return
+    for (const [branch, name] of Object.entries(names)) {
+      const s = shortOf(name)
+      if (!s) continue
+      const merged = baseText?.(branch) ?? null
+      push(branch, {
+        label: merged ?? `${prefix}${s}`,
+        kind,
+        filled: true,
+      })
+    }
+  }
+
+  if (horoscope.decadal?.palace_names) {
+    emit(
+      horoscope.decadal.palace_names,
+      '大',
+      'decadal',
+      (b) =>
+        b === horoscope.decadal!.branch
+          ? `大命 ${horoscope.decadal!.age_start}~${horoscope.decadal!.age_end}`
+          : null,
+    )
+  }
+  emit(
+    horoscope.yearly.palace_names,
+    '流',
+    'yearly',
+    (b) => (b === horoscope.yearly.zhi ? `流命 ${horoscope.yearly.gan}${horoscope.yearly.zhi}年` : null),
+  )
+  emit(horoscope.xiaoxian_palace_names, '小', 'xiaoxian')
+  return out
+}

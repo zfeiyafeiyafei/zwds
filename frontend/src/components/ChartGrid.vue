@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { ChartResult, Palace } from '../api'
-import { hourLabel, lunarLabel, relationEdges } from '../chartText'
+import type { ChartResult, Horoscope, Palace } from '../api'
+import { hourLabel, lunarLabel, periodTags, relationEdges } from '../chartText'
 import PalaceCell from './PalaceCell.vue'
 
 const props = defineProps<{
   chart: ChartResult
   personName?: string
   selectedBranch?: string | null
+  horoscope?: Horoscope | null
 }>()
 
 const emit = defineEmits<{
@@ -36,6 +37,9 @@ const cells = computed(() =>
     pos: GRID_POS[palace.branch] ?? [0, 0],
   })),
 )
+
+/** 地支 → 运限标签（大限/流年/小限）。 */
+const tagMap = computed(() => periodTags(props.horoscope))
 
 const lunarText = computed(() => lunarLabel(props.chart.calendar))
 
@@ -115,6 +119,7 @@ const lineSegments = computed(() => {
       :key="cell.palace.branch"
       :palace="cell.palace"
       :selected="selectedBranch === cell.palace.branch"
+      :tags="tagMap[cell.palace.branch] ?? []"
       :style="{ gridRow: cell.pos[0] + 1, gridColumn: cell.pos[1] + 1 }"
       @select="emit('select', $event)"
     />
@@ -167,8 +172,13 @@ const lineSegments = computed(() => {
 .chart-grid {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, auto);
+  /* 容器取视口允许范围内的最大正方形：4×4 等分轨道，宫位单元格恒为正方形 */
+  width: 100%;
+  max-width: calc(100vh - 96px);
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
   gap: 0;
   border: 1px solid var(--line-strong);
   background: var(--line);
@@ -193,6 +203,7 @@ const lineSegments = computed(() => {
 
 .chart-grid > :deep(.palace) {
   outline: 1px solid var(--line);
+  overflow: hidden;
 }
 
 .chart-grid > :deep(.palace.selected) {

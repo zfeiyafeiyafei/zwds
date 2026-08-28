@@ -15,8 +15,14 @@ from ziwei_engine.calendar.converter import BirthInput
 from ziwei_engine.chart.natal import calculate
 from ziwei_engine.constants import EARTHLY_BRANCHES as Z
 from ziwei_engine.constants import HEAVENLY_STEMS as G
+from ziwei_engine.constants import PALACE_NAME_ALIASES
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _alias(name: str) -> str:
+    """夹具来自 iztro 原始输出，宫名旧称映射为本产品命名（仆役→交友）。"""
+    return PALACE_NAME_ALIASES.get(name, name)
 
 
 def _load(path: Path) -> tuple[BirthInput, dict]:
@@ -67,7 +73,7 @@ def test_skeleton(fixture: Path) -> None:
     assert sk.body == ref["body"]
     for p in ref["palaces"]:
         my = sk.palaces[_iz_branch(p)]
-        assert my.name == p["name"]
+        assert my.name == _alias(p["name"])
         assert G[my.heavenly_stem] == p["heavenlyStem"]
         assert my.is_body_palace == p["isBodyPalace"]
 
