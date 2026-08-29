@@ -8,10 +8,10 @@
  *   因此 12 宫位节点全部归组于该 <g> 内；中心信息盘独立成 <g class="center-disc">，不随环转动。
  *
  * 几何参数（1280×860 视口整盘无滚动）：
- * - viewBox 980×888，12 个正圆节点半径 r=75，圆心等距落在 R=310 的圆周上（30° 均分）
- * - 运限徽标：顶部宫位叠于圆上方；最左（辰卯寅）/最右（申酉戌）三宫置于圆圈外侧竖排
+ * - viewBox 780×780，12 个正圆节点半径 r=75，圆心等距落在 R=310 的圆周上（30° 均分）
+ * - 运限徽标：三系徽标（大限/流年/小限）置于圆内最下方水平一行
  * - 不重叠约束：相邻中心距 2·R·sin15° ≈ 160.4，2r=150，缝隙 ≈10.4px ≥ 4px ✓
- * - 视口约束：总直径 2(R+r)=770 ≤ 790 ✓
+ * - 视口约束：总直径 2(R+r)=770 ≤ 780 ✓
  * - 节点内最长行（杂曜/小限）允许少量溢出圆边界（用户确认），不再为此缩字号
  */
 import { computed } from 'vue'
@@ -28,6 +28,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [branch: string]
+  'select-center': []
 }>()
 
 const CX = 390
@@ -87,6 +88,7 @@ interface RingNode {
   palace: Palace
   x: number
   y: number
+  badgeX: number
   majors: StarItem[]
   minors: StarItem[]
   adj: string[]
@@ -95,25 +97,6 @@ interface RingNode {
   pills: PillLayout[]
 }
 
-/** 徽标方位：顶部宫位徽标叠在圆上方；最左（辰卯寅）/最右（申酉戌）三宫徽标置于圆圈外侧。 */
-type PillSide = 'top' | 'left' | 'right'
-
-// 与 CLOCK_ORDER 一一对应（午=0 … 巳=11）
-const PILL_SIDES: PillSide[] = [
-  'top', // 午
-  'top', // 未
-  'right', // 申
-  'right', // 酉
-  'right', // 戌
-  'top', // 亥
-  'top', // 子
-  'top', // 丑
-  'left', // 寅
-  'left', // 卯
-  'left', // 辰
-  'top', // 巳
-]
-
 interface PillLayout {
   tag: PeriodTag
   cx: number
@@ -121,25 +104,26 @@ interface PillLayout {
   w: number
 }
 
-/** 徽标宽度：CJK 按字宽 10、半角按 6 估，前后各留 6px 内边距。 */
+/** 徽标宽度：CJK 按字宽 10、半角按 6 估，前后各留 4px 内边距。 */
 function pillWidth(label: string): number {
   let w = 0
   for (const ch of label) w += /[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/.test(ch) ? 10 : 6
-  return w + 12
+  return w + 8
 }
 
-function layoutPills(tags: PeriodTag[], side: PillSide): PillLayout[] {
-  const n = tags.length
-  return tags.map((tag, ti) => {
-    const w = pillWidth(tag.label)
-    if (side === 'top') {
-      return { tag, cx: 0, cy: -(NODE_R + 15 + ti * 17), w }
-    }
-    // 侧位：徽标竖排在圆圈外侧，整体相对圆心垂直居中；cx = 徽标中心
-    const cy = (ti - (n - 1) / 2) * 17
-    return side === 'left'
-      ? { tag, cx: -(NODE_R + 12) - w / 2, cy, w }
-      : { tag, cx: NODE_R + 12 + w / 2, cy, w }
+/**
+ * 徽标布局：三系徽标（大限/流年/小限）置于圆内最下方，水平居中一行。
+ * cy=48：徽标底边 56.5 处节点弦宽 ≈98.6px，三枚 2 字徽标 + 4px 间隙总宽 ~92px ✓
+ */
+function layoutPills(tags: PeriodTag[]): PillLayout[] {
+  const widths = tags.map((t) => pillWidth(t.label))
+  const gap = 4
+  const total = widths.reduce((a, b) => a + b, 0) + gap * (tags.length - 1)
+  let cursor = -total / 2
+  return tags.map((tag, i) => {
+    const cx = cursor + widths[i] / 2
+    cursor += widths[i] + gap
+    return { tag, cx, cy: 48, w: widths[i] }
   })
 }
 
@@ -152,12 +136,14 @@ const nodes = computed<RingNode[]>(() =>
       palace,
       x: CX + RING_R * Math.cos(angle),
       y: CY + RING_R * Math.sin(angle),
+      // 宫名+干支合行整体居中：身宫徽标贴行尾（行宽 = 宫名×12 + 5 间隔 + 干支 2×10）
+      badgeX: (palace.name.length * 12 + 5 + 20) / 2 + 8,
       majors: layoutStarRow(palace.major_stars, 14, 8),
       minors: layoutStarRow(palace.minor_stars, 9, 6),
       adj,
-      footerY: adj.length > 1 ? 37 : 31,
+      footerY: adj.length > 1 ? 35 : 29,
       agesText: palace.ages.join(','),
-      pills: layoutPills(tagMap.value[palace.branch] ?? [], PILL_SIDES[idx]),
+      pills: layoutPills(tagMap.value[palace.branch] ?? []),
     }
   }),
 )
@@ -207,7 +193,7 @@ const infoLines = computed(() => {
 </script>
 
 <template>
-  <svg class="clock-chart" viewBox="-100 -78 980 888" role="img" aria-label="紫微斗数时钟圆盘命盘">
+  <svg class="clock-chart" viewBox="0 0 780 780" role="img" aria-label="紫微斗数时钟圆盘命盘">
     <g class="relation-lines">
       <line
         v-for="(seg, i) in relationSegs"
@@ -254,16 +240,18 @@ const infoLines = computed(() => {
           </text>
         </g>
 
-        <text y="-48" class="node-name" :class="{ bold: n.palace.name === '命宫' }">
-          {{ n.palace.name }}
+        <text y="-45" class="node-head">
+          <tspan class="node-name" :class="{ bold: n.palace.name === '命宫' }">{{
+            n.palace.name
+          }}</tspan>
+          <tspan class="node-ganzhi" dx="5">{{ n.palace.stem }}{{ n.palace.branch }}</tspan>
         </text>
         <g v-if="n.palace.is_body_palace" class="body-badge">
-          <circle :cx="n.palace.name.length * 6 + 11" cy="-52" r="6.5" />
-          <text :x="n.palace.name.length * 6 + 11" y="-52">{{ '身' }}</text>
+          <circle :cx="n.badgeX" cy="-49" r="6.5" />
+          <text :x="n.badgeX" y="-49">{{ '身' }}</text>
         </g>
-        <text y="-33" class="node-ganzhi">{{ n.palace.stem }}{{ n.palace.branch }}</text>
 
-        <g transform="translate(0, -11)">
+        <g transform="translate(0, -15)">
           <g v-for="it in n.majors" :key="it.star.name">
             <text :x="it.x" class="star-name" :class="{ ji: it.star.mutagen === '忌' }">
               {{ it.star.name }}
@@ -285,7 +273,7 @@ const infoLines = computed(() => {
           </g>
         </g>
 
-        <g transform="translate(0, 5)">
+        <g transform="translate(0, 0)">
           <g v-for="it in n.minors" :key="it.star.name">
             <text :x="it.x" class="minor-name">{{ it.star.name }}</text>
             <text v-if="it.star.brightness" :x="it.x + it.nameW + 1.5" class="minor-brightness">
@@ -308,7 +296,7 @@ const infoLines = computed(() => {
         <text
           v-for="(line, i) in n.adj"
           :key="line"
-          :y="17 + i * 10"
+          :y="14 + i * 10"
           class="adj-line"
         >
           {{ line }}
@@ -321,7 +309,7 @@ const infoLines = computed(() => {
       </g>
     </g>
 
-    <g class="center-disc">
+    <g class="center-disc clickable" @click="emit('select-center')">
       <circle :cx="CX" :cy="CY" :r="CENTER_R" class="center-circle" />
       <text :x="CX" :y="CY - 78" class="center-title">紫微斗数命盘</text>
       <text
@@ -342,8 +330,8 @@ const infoLines = computed(() => {
 .clock-chart {
   display: block;
   width: 100%;
-  /* 保持比例的同时钳制尺寸；viewBox 980×888（顶部 + 左右为运限徽标留白） */
-  max-width: calc((100vh - 132px) * 980 / 888);
+  /* 保持比例的同时钳制尺寸；viewBox 780×780（正方形，徽标已收进圆内） */
+  max-width: calc(100vh - 132px);
   margin: 0 auto;
   height: auto;
   background: var(--paper);
@@ -377,10 +365,13 @@ const infoLines = computed(() => {
   stroke-width: 1.5;
 }
 
+.node-head {
+  text-anchor: middle;
+}
+
 .node-name {
   font-size: 12px;
   fill: var(--ink-soft);
-  text-anchor: middle;
 }
 
 .node-name.bold {
@@ -405,7 +396,6 @@ const infoLines = computed(() => {
   font-size: 10px;
   font-weight: 600;
   fill: var(--ink);
-  text-anchor: middle;
 }
 
 .star-name {
@@ -461,8 +451,16 @@ const infoLines = computed(() => {
 }
 
 .ages {
-  font-size: 6px;
+  font-size: 8px;
   fill: var(--ink-faint);
+}
+
+.center-disc {
+  cursor: default;
+}
+
+.center-disc.clickable {
+  cursor: pointer;
 }
 
 .center-circle {

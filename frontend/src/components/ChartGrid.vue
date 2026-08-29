@@ -13,6 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [branch: string]
+  'select-center': []
 }>()
 
 /** 传统宫格：地支 → [row, col]（0 起）。中央 2×2 为命盘信息。 */
@@ -124,7 +125,7 @@ const lineSegments = computed(() => {
       @select="emit('select', $event)"
     />
 
-    <div class="center-panel">
+    <div class="center-panel clickable" @click="emit('select-center')">
       <h1 class="center-title">紫微斗数命盘</h1>
       <dl class="center-info">
         <div v-if="personName">
@@ -223,6 +224,10 @@ const lineSegments = computed(() => {
   padding: 16px;
   background: var(--panel);
   outline: 1px solid var(--line);
+}
+
+.center-panel.clickable {
+  cursor: pointer;
 }
 
 .center-title {

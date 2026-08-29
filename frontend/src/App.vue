@@ -13,9 +13,12 @@ import type { BirthPayload, ChartResult, ChartSummary } from './api'
 import BirthForm from './components/BirthForm.vue'
 import ChartGrid from './components/ChartGrid.vue'
 import ClockChart from './components/ClockChart.vue'
+import DateField from './components/DateField.vue'
 import EditChartDialog from './components/EditChartDialog.vue'
+import ManageChartsDialog from './components/ManageChartsDialog.vue'
 import PatternPanel from './components/PatternPanel.vue'
-import { shortHourLabel } from './hours'
+import SavedChartsPanel from './components/SavedChartsPanel.vue'
+import StarDetail from './components/StarDetail.vue'
 
 type LayoutKey = 'grid' | 'clock'
 
@@ -37,6 +40,8 @@ const selectedBranch = ref<string | null>(null)
 const currentChartId = ref<number | null>(null)
 // 编辑中的命盘（非 null 时显示编辑对话框）
 const editingItem = ref<ChartSummary | null>(null)
+// 命盘管理对话框开关
+const manageOpen = ref(false)
 
 // ---- 运限定位（biz_requirement.md §4.1.2-4）：默认今天，可切日期重算 ----
 const todayISO = () => {
@@ -66,9 +71,25 @@ async function recalcHoroscope() {
 
 watch(targetDate, recalcHoroscope)
 
-/** 三方四正联动：点其他宫换选，再点同一宫取消。 */
+/** 三方四正联动：点其他宫换选，再点同一宫取消；右侧解析栏跟随选中宫。 */
+const detailBranch = ref<string | null>(null)
+const detailCenter = ref(false)
+
 function onSelectPalace(branch: string) {
   selectedBranch.value = selectedBranch.value === branch ? null : branch
+  detailBranch.value = branch
+  detailCenter.value = false
+}
+
+function onSelectCenter() {
+  detailCenter.value = true
+  detailBranch.value = null
+}
+
+/** 新盘默认在右侧展示命宫解析。 */
+function focusSoulPalace() {
+  detailBranch.value = chart.value?.meta.soul_palace_branch ?? null
+  detailCenter.value = false
 }
 
 function onCalculated(result: ChartResult, name: string, payload: BirthPayload) {
@@ -76,6 +97,7 @@ function onCalculated(result: ChartResult, name: string, payload: BirthPayload) 
   personName.value = name
   lastPayload.value = payload
   currentChartId.value = null
+  focusSoulPalace()
 }
 
 async function refreshList() {
@@ -95,13 +117,7 @@ async function onExport(item: ChartSummary) {
   }
 }
 
-const importInput = ref<HTMLInputElement>()
-
-async function onImportFile(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = '' // 允许重复选择同一文件
-  if (!file) return
+async function onImportFile(file: File) {
   try {
     const snapshot = JSON.parse(await file.text())
     await importChart(snapshot, file.name.replace(/\.json$/i, '').replace(/^ziwei_/, ''))
@@ -123,6 +139,7 @@ async function loadSaved(item: ChartSummary) {
       gender: chart.value.input.gender,
     }
     await recalcHoroscope()
+    focusSoulPalace()
   } catch (e) {
     listError.value = e instanceof Error ? e.message : String(e)
   }
@@ -133,6 +150,12 @@ async function onEdited(chartId: number) {
   await refreshList()
   const item = saved.value.find((x) => x.chart_id === chartId)
   if (currentChartId.value === chartId && item) await loadSaved(item)
+}
+
+/** 管理对话框中双击/回车记录：加载命盘并收起对话框。 */
+async function onManageSelect(item: ChartSummary) {
+  manageOpen.value = false
+  await loadSaved(item)
 }
 
 async function onDelete(item: ChartSummary) {
@@ -178,59 +201,23 @@ onMounted(async () => {
     <aside class="sidebar">
       <BirthForm ref="formRef" @calculated="onCalculated" @saved="refreshList" />
 
-      <section class="saved-panel">
-        <div class="saved-head">
-          <h2 class="saved-title">已保存命盘</h2>
-          <button type="button" class="import-btn" @click="importInput?.click()">导入 JSON</button>
-          <input
-            ref="importInput"
-            type="file"
-            accept=".json,application/json"
-            hidden
-            @change="onImportFile"
-          />
-        </div>
-        <p v-if="listError" class="saved-error">{{ listError }}</p>
-        <p v-else-if="saved.length === 0" class="saved-empty">暂无保存记录，填好生辰后点「保存」。</p>
-        <ul v-else class="saved-list">
-          <li v-for="item in saved" :key="item.chart_id" class="saved-row">
-            <button type="button" class="saved-item" @click="loadSaved(item)">
-              <span class="saved-person">{{ item.person }}</span>
-              <span class="saved-meta">
-                {{ item.solar_datetime?.slice(0, 10) ?? ''
-                }}<template v-if="item.hour_index != null">
-                  · {{ shortHourLabel(item.hour_index) }}</template
-                >
-                · {{ item.gender }}
-              </span>
-            </button>
-            <button
-              type="button"
-              class="row-btn"
-              title="编辑（姓名 / 出生信息）"
-              @click.stop="editingItem = item"
-            >
-              ✎
-            </button>
-            <button
-              type="button"
-              class="row-btn"
-              title="删除命盘"
-              @click.stop="onDelete(item)"
-            >
-              ✕
-            </button>
-            <button
-              type="button"
-              class="row-btn"
-              title="导出 JSON 文件"
-              @click.stop="onExport(item)"
-            >
-              ⇩
-            </button>
-          </li>
-        </ul>
-      </section>
+      <SavedChartsPanel
+        :items="saved"
+        :error="listError"
+        @select="loadSaved"
+        @manage="manageOpen = true"
+        @import-file="onImportFile"
+      />
+
+      <ManageChartsDialog
+        :open="manageOpen"
+        :items="saved"
+        @close="manageOpen = false"
+        @select="onManageSelect"
+        @edit="editingItem = $event"
+        @remove="onDelete"
+        @export="onExport"
+      />
 
       <EditChartDialog :item="editingItem" @close="editingItem = null" @saved="onEdited" />
     </aside>
@@ -258,7 +245,7 @@ onMounted(async () => {
         <div class="toolbar-right">
           <div class="period-nav" role="group" aria-label="运限日期">
             <button type="button" title="上一年" @click="shiftTargetDate(-1)">‹</button>
-            <input v-model="targetDate" type="date" aria-label="运限目标日期" />
+            <DateField v-model="targetDate" />
             <button type="button" title="下一年" @click="shiftTargetDate(1)">›</button>
             <span v-if="chart?.horoscope" class="age-chip">
               虚岁 {{ chart.horoscope.nominal_age
@@ -274,26 +261,38 @@ onMounted(async () => {
         </div>
       </div>
 
-      <template v-if="chart">
-        <ChartGrid
-          v-if="layout === 'grid'"
-          :chart="chart"
-          :person-name="personName"
-          :selected-branch="selectedBranch"
-          :horoscope="chart.horoscope"
-          @select="onSelectPalace"
+      <div class="main-row">
+        <div class="chart-col">
+          <template v-if="chart">
+            <ChartGrid
+              v-if="layout === 'grid'"
+              :chart="chart"
+              :person-name="personName"
+              :selected-branch="selectedBranch"
+              :horoscope="chart.horoscope"
+              @select="onSelectPalace"
+              @select-center="onSelectCenter"
+            />
+            <ClockChart
+              v-else
+              :chart="chart"
+              :person-name="personName"
+              :selected-branch="selectedBranch"
+              :horoscope="chart.horoscope"
+              @select="onSelectPalace"
+              @select-center="onSelectCenter"
+            />
+          </template>
+          <p v-else class="loading">排盘中…</p>
+          <PatternPanel v-if="chart?.analysis" :patterns="chart.analysis.patterns" />
+        </div>
+        <StarDetail
+          v-if="chart?.analysis"
+          :analysis="chart.analysis"
+          :branch="detailBranch"
+          :center="detailCenter"
         />
-        <ClockChart
-          v-else
-          :chart="chart"
-          :person-name="personName"
-          :selected-branch="selectedBranch"
-          :horoscope="chart.horoscope"
-          @select="onSelectPalace"
-        />
-      </template>
-      <p v-else class="loading">排盘中…</p>
-      <PatternPanel v-if="chart?.analysis" :patterns="chart.analysis.patterns" />
+      </div>
     </main>
   </div>
 </template>
@@ -307,123 +306,25 @@ onMounted(async () => {
   align-items: start;
 }
 
+/* 命盘区 + 右侧星曜解析栏 */
+.main-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 12px;
+}
+
+.chart-col {
+  flex: 1;
+  min-width: 0;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
   gap: 16px;
   position: sticky;
   top: 16px;
-}
-
-.saved-panel {
-  padding: 16px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
-
-.saved-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.saved-title {
-  margin: 0;
-  font-size: 14px;
-  letter-spacing: 0.2em;
-}
-
-.import-btn {
-  padding: 3px 10px;
-  font-size: 12px;
-  color: var(--ink-soft);
-  background: transparent;
-  border: 1px dashed var(--line-strong);
-  border-radius: 4px;
-}
-
-.import-btn:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.saved-row {
-  display: flex;
-  gap: 2px;
-}
-
-.row-btn {
-  flex: none;
-  width: 26px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ink-faint);
-  font-size: 13px;
-}
-
-.row-btn:hover {
-  background: #f2ecdc;
-  border-color: var(--line);
-  color: var(--accent);
-}
-
-.saved-empty {
-  margin: 0;
-  font-size: 12px;
-  color: var(--ink-faint);
-}
-
-.saved-error {
-  margin: 0;
-  font-size: 12px;
-  color: var(--vermilion-deep);
-}
-
-.saved-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-
-.saved-item {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 6px 8px;
-  text-align: left;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-}
-
-.saved-item:hover {
-  background: #f2ecdc;
-  border-color: var(--line);
-}
-
-.saved-item:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.saved-person {
-  font-size: 13px;
-  color: var(--ink);
-}
-
-.saved-meta {
-  font-size: 11px;
-  color: var(--ink-faint);
 }
 
 .content {
@@ -518,12 +419,8 @@ onMounted(async () => {
   background: #f2ecdc;
 }
 
-.period-nav input[type='date'] {
-  padding: 4px 6px;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: var(--panel);
-  font-size: 13px;
+.period-nav .date-field {
+  width: 148px;
 }
 
 .age-chip {

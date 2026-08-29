@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { calculate, saveChart } from '../api'
 import type { BirthPayload, ChartResult } from '../api'
 import { HOURS } from '../hours'
+import DateField from './DateField.vue'
 
 const emit = defineEmits<{
   calculated: [chart: ChartResult, personName: string, payload: BirthPayload]
@@ -76,7 +77,7 @@ defineExpose({ onCalculate })
 
     <label class="field">
       <span>公历日期</span>
-      <input v-model="form.solar_date" type="date" required />
+      <DateField v-model="form.solar_date" />
     </label>
 
     <label class="field">

@@ -3,6 +3,7 @@ import { reactive, ref, watch } from 'vue'
 import { getChart, updateChart } from '../api'
 import type { ChartSummary } from '../api'
 import { HOURS } from '../hours'
+import DateField from './DateField.vue'
 
 const props = defineProps<{ item: ChartSummary | null }>()
 const emit = defineEmits<{ close: []; saved: [chartId: number] }>()
@@ -88,7 +89,7 @@ async function onSave() {
 
         <label class="field">
           <span>公历日期</span>
-          <input v-model="form.solar_date" type="date" required />
+          <DateField v-model="form.solar_date" />
         </label>
 
         <label class="field">

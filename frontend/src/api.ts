@@ -52,7 +52,7 @@ export interface ChartResult {
   palaces: Palace[]
   display: Record<string, unknown>
   horoscope?: Horoscope
-  analysis?: { patterns: PatternMatch[] }
+  analysis?: { patterns: PatternMatch[]; stars?: PalaceStarAnalysis[]; soul_body?: SoulBody }
 }
 /** 格局分析命中（biz_requirement.md §4.3.1）。 */
 export interface PatternMatch {
@@ -62,6 +62,50 @@ export interface PatternMatch {
   condition: string
   domain: string
   explain: string
+}
+
+/** 单星解读条目（biz_requirement.md §4.3.2）。 */
+export interface StarItem {
+  name: string
+  category: '主星' | '辅星' | '杂曜'
+  brightness: string
+  mutagen: string
+  element: string
+  trait: string
+  character: string
+  strength: string
+  risk: string
+  brightness_note: string
+  mutagen_note: string
+  palace_note: string
+}
+
+/** 命身四星条目：同一星曜兼具多个身份（命宫主星/命主/身宫主星/身主）时合并为一卡。 */
+export interface SoulBodyStar {
+  name: string
+  /** 角色（与 notes 一一对应）：命宫主星 / 命主 / 身宫主星 / 身主 */
+  roles: string[]
+  notes: string[]
+  /** 空宫借对宫主星 */
+  borrowed: boolean
+  brightness: string
+  mutagen: string
+}
+
+/** 命身四星解析（命宫主星/命主/身宫主星/身主 + 命身关系总述）。 */
+export interface SoulBody {
+  stars: SoulBodyStar[]
+  overview: string
+}
+
+/** 单宫星曜分析。 */
+export interface PalaceStarAnalysis {
+  palace: string
+  branch: string
+  is_soul: boolean
+  is_body: boolean
+  items: StarItem[]
+  pair_note: string
 }
 
 export interface HoroscopeDecadal {

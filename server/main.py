@@ -15,8 +15,9 @@ from pydantic import BaseModel, Field
 
 from ziwei_engine.calendar.converter import BirthInput
 from ziwei_engine.chart.natal import NatalChart, calculate
-from ziwei_engine.io.serialize import ENGINE_VERSION, chart_to_dict, horoscope_to_dict, patterns_to_dict
+from ziwei_engine.io.serialize import ENGINE_VERSION, chart_to_dict, horoscope_to_dict, patterns_to_dict, soul_body_to_dict, star_analysis_to_dict
 from ziwei_engine.rules.patterns import analyze_patterns
+from ziwei_engine.rules.star_interp import analyze_soul_body, analyze_stars
 from ziwei_engine.rules.horoscope import locate_horoscope
 
 app = FastAPI(title="Ziwei API", version=ENGINE_VERSION)
@@ -65,13 +66,22 @@ def _horoscope(chart: NatalChart, target_date: str | None) -> dict:
     return horoscope_to_dict(info)
 
 
+def _analysis(chart: NatalChart) -> dict:
+    """格局 + 星曜 + 命身主分析（biz_requirement.md §4.3.1/§4.3.2）。"""
+    return {
+        "patterns": patterns_to_dict(analyze_patterns(chart)),
+        "stars": star_analysis_to_dict(analyze_stars(chart)),
+        "soul_body": soul_body_to_dict(analyze_soul_body(chart)),
+    }
+
+
 @app.post("/api/charts/calculate")
 def calculate_chart(req: CalculateRequest) -> dict:
     y, m, d = (int(x) for x in req.solar_date.split("-"))
     chart = calculate(BirthInput(y, m, d, req.hour_index, req.gender))
     result = chart_to_dict(chart)
     result["horoscope"] = _horoscope(chart, req.target_date)
-    result["analysis"] = {"patterns": patterns_to_dict(analyze_patterns(chart))}
+    result["analysis"] = _analysis(chart)
     return result
 
 
@@ -139,9 +149,16 @@ def get_chart(chart_id: int) -> dict:
     """读取命盘快照（完整 JSON，可直接渲染或导出）。"""
     with _session_factory() as session:
         try:
-            return load_snapshot(session, chart_id)
+            snap = load_snapshot(session, chart_id)
         except KeyError:
             raise HTTPException(status_code=404, detail="chart not found") from None
+    # 快照本身不含运限/格局：按出生参数重排现算，保证与当前引擎版本一致
+    inp = snap["input"]
+    y, m, d = (int(x) for x in inp["solar_date"].split("-"))
+    chart = calculate(BirthInput(y, m, d, inp["hour_index"], inp["gender"]))
+    snap["horoscope"] = _horoscope(chart, None)
+    snap["analysis"] = _analysis(chart)
+    return snap
 
 
 class UpdateChartRequest(BaseModel):

@@ -14,6 +14,7 @@ from ..chart.natal import NatalChart
 from ..constants import EARTHLY_BRANCHES, HEAVENLY_STEMS
 from ..rules.horoscope import HoroscopeInfo
 from ..rules.patterns import PatternMatch
+from ..rules.star_interp import PalaceAnalysis, SoulBodyNotes
 
 ENGINE_VERSION = "0.1.0"
 
@@ -95,7 +96,7 @@ def chart_to_dict(chart: NatalChart, *, display: dict | None = None) -> dict[str
 def horoscope_to_dict(h: HoroscopeInfo) -> dict[str, Any]:
     """HoroscopeInfo → JSON 结构（biz_requirement.md §4.1.2-4.1.4）。
 
-    palace_names：运限十二宫 {地支: 宫名}，前端据此标注 大命/大兄…、流命…、小命…。
+    palace_names：运限十二宫 {地支: 宫名}，前端据此标注 大命/大兄…、年命…、小命…。
     """
     decadal = None
     if h.decadal is not None:
@@ -124,3 +125,13 @@ def horoscope_to_dict(h: HoroscopeInfo) -> dict[str, Any]:
 def patterns_to_dict(matches: list[PatternMatch]) -> list[dict[str, Any]]:
     """格局识别结果 → JSON 数组。"""
     return [asdict(m) for m in matches]
+
+
+def star_analysis_to_dict(palaces: list[PalaceAnalysis]) -> list[dict[str, Any]]:
+    """星曜分析结果 → JSON 数组（逐宫，biz_requirement.md §4.3.2）。"""
+    return [asdict(p) for p in palaces]
+
+
+def soul_body_to_dict(notes: SoulBodyNotes) -> dict[str, Any]:
+    """命主/身主断语 → JSON。"""
+    return asdict(notes)

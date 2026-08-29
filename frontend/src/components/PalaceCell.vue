@@ -1,12 +1,21 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Palace, Star } from '../api'
 import type { PeriodTag } from '../chartText'
 
-defineProps<{ palace: Palace; selected?: boolean ; tags?: PeriodTag[]; }>()
+const props = defineProps<{ palace: Palace; selected?: boolean; tags?: PeriodTag[] }>()
 
 const emit = defineEmits<{
   select: [branch: string]
 }>()
+
+/** 三系徽标分流：小限入宫名行；大限/流年入页脚大限年龄段之后。 */
+const decadalTag = computed(() => props.tags?.find((t) => t.kind === 'decadal'))
+const yearlyTag = computed(() => props.tags?.find((t) => t.kind === 'yearly'))
+const xiaoxianTag = computed(() => props.tags?.find((t) => t.kind === 'xiaoxian'))
+
+/** 流年岁序：虚岁超 100 的不显示。 */
+const agesText = computed(() => props.palace.ages.filter((a) => a <= 100).join(','))
 
 const MUTAGEN_CLASS: Record<string, string> = {
   禄: 'lu',
@@ -32,39 +41,49 @@ function mutagenClass(star: Star): string {
         {{ palace.name }}
         <em v-if="palace.is_body_palace" class="body-badge">身</em>
       </span>
+      <span class="head-tags">
+        <i v-if="xiaoxianTag" class="period-tag xiaoxian" :class="{ filled: xiaoxianTag.filled }">{{
+          xiaoxianTag.label
+        }}</i>
+      </span>
       <span class="palace-ganzhi">{{ palace.stem }}{{ palace.branch }}</span>
     </header>
-    <div v-if="tags?.length" class="period-tags">
-      <i v-for="t in tags" :key="t.label" class="period-tag" :class="[t.kind, { filled: t.filled }]">{{
-        t.label
-      }}</i>
+
+    <div class="stars-wrap">
+      <section class="stars major">
+        <span
+          v-for="s in palace.major_stars"
+          :key="s.name"
+          class="star major-star"
+          :class="{ ji: s.mutagen === '忌' }"
+        >
+          {{ s.name }}<span v-if="s.brightness" class="brightness">{{ s.brightness }}</span
+          ><i v-if="s.mutagen" class="mutagen" :class="mutagenClass(s)">{{ s.mutagen }}</i>
+        </span>
+      </section>
+
+      <section class="stars minor">
+        <span v-for="s in palace.minor_stars" :key="s.name" class="star">
+          {{ s.name }}<i v-if="s.mutagen" class="mutagen" :class="mutagenClass(s)">{{ s.mutagen }}</i>
+        </span>
+      </section>
+
+      <section class="stars adjective">
+        <span v-for="s in palace.adjective_stars" :key="s.name" class="star">{{ s.name }}</span>
+      </section>
     </div>
 
-    <section class="stars major">
-      <span
-        v-for="s in palace.major_stars"
-        :key="s.name"
-        class="star major-star"
-        :class="{ ji: s.mutagen === '忌' }"
-      >
-        {{ s.name }}<span v-if="s.brightness" class="brightness">{{ s.brightness }}</span
-        ><i v-if="s.mutagen" class="mutagen" :class="mutagenClass(s)">{{ s.mutagen }}</i>
-      </span>
-    </section>
-
-    <section class="stars minor">
-      <span v-for="s in palace.minor_stars" :key="s.name" class="star">
-        {{ s.name }}<i v-if="s.mutagen" class="mutagen" :class="mutagenClass(s)">{{ s.mutagen }}</i>
-      </span>
-    </section>
-
-    <section class="stars adjective">
-      <span v-for="s in palace.adjective_stars" :key="s.name" class="star">{{ s.name }}</span>
-    </section>
-
     <footer class="palace-foot">
-      <span class="decadal">{{ palace.decadal_range[0] }}~{{ palace.decadal_range[1] }}</span>
-      <span class="ages">{{ palace.ages.join(',') }}</span>
+      <div class="foot-line">
+        <span class="decadal">{{ palace.decadal_range[0] }}~{{ palace.decadal_range[1] }}</span>
+        <i v-if="decadalTag" class="period-tag decadal" :class="{ filled: decadalTag.filled }">{{
+          decadalTag.label
+        }}</i>
+        <i v-if="yearlyTag" class="period-tag yearly" :class="{ filled: yearlyTag.filled }">{{
+          yearlyTag.label
+        }}</i>
+      </div>
+      <div class="ages">{{ agesText }}</div>
     </footer>
   </div>
 </template>
@@ -73,9 +92,10 @@ function mutagenClass(star: Star): string {
 .palace {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 2px;
+  padding: 5px 8px;
   min-height: 0; /* 高度由宫格轨道（正方形）决定 */
+  overflow: hidden; /* 溢出收进 stars-wrap 滚动区，不再顶出 footer */
   background: var(--panel);
   cursor: pointer;
 }
@@ -115,14 +135,36 @@ function mutagenClass(star: Star): string {
   color: var(--ink);
 }
 
+/* 小限徽标：宫名之后、干支之前 */
+.head-tags {
+  flex: 1;
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* 星曜区：杂曜过多时内部滚动，header/徽标/footer 保持恒可见 */
+.stars-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .stars {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 6px;
+  gap: 1px 5px;
+  line-height: 1.3;
 }
 
 .major-star {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--vermilion);
 }
@@ -176,13 +218,19 @@ function mutagenClass(star: Star): string {
 }
 
 .palace-foot {
-  margin-top: auto;
+  flex-shrink: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  gap: 1px;
   padding-top: 3px;
   border-top: 1px dashed var(--line);
+}
+
+/* 页脚首行：大限年龄段 + 大限/流年徽标 */
+.foot-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
 
 .decadal {
@@ -192,18 +240,12 @@ function mutagenClass(star: Star): string {
   white-space: nowrap;
 }
 
+/* 流年岁序：独立一行内完整显示（≤100 岁后最长 9 个数字 ≈26 字符，9px 不换行可容） */
 .ages {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--ink-faint);
-  text-align: right;
-  word-break: break-all;
+  white-space: nowrap;
 }
-.period-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-
 .period-tag {
   font-style: normal;
   font-size: 10px;

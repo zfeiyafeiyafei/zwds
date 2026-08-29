@@ -52,8 +52,9 @@ function shortOf(name: string): string {
 
 /**
  * 运限标注：每宫三系徽标（大限/流年/小限），随目标日期整体重排。
- * - 十二宫各得一枚实心徽标：大命/大兄…、流命/流兄…、小命/小兄…
- * - 命宫位徽标合并原信息：大命 45~54、流命 丙午年
+ * - 十二宫各得一枚实心徽标：大命/大兄…、年命/年兄…、小命/小兄…
+ *   （流年宫位用「年」前缀：年命 = 流年命宫，通用称呼）
+ * - 徽标均为 2 字短名：大限年龄段、流年干支由页脚/顶栏/中心盘承载，不进徽标
  * 无 horoscope（旧快照）时返回空表。
  */
 export function periodTags(
@@ -85,22 +86,9 @@ export function periodTags(
   }
 
   if (horoscope.decadal?.palace_names) {
-    emit(
-      horoscope.decadal.palace_names,
-      '大',
-      'decadal',
-      (b) =>
-        b === horoscope.decadal!.branch
-          ? `大命 ${horoscope.decadal!.age_start}~${horoscope.decadal!.age_end}`
-          : null,
-    )
+    emit(horoscope.decadal.palace_names, '大', 'decadal')
   }
-  emit(
-    horoscope.yearly.palace_names,
-    '流',
-    'yearly',
-    (b) => (b === horoscope.yearly.zhi ? `流命 ${horoscope.yearly.gan}${horoscope.yearly.zhi}年` : null),
-  )
+  emit(horoscope.yearly.palace_names, '年', 'yearly')
   emit(horoscope.xiaoxian_palace_names, '小', 'xiaoxian')
   return out
 }
