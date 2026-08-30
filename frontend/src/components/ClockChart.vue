@@ -142,7 +142,7 @@ const nodes = computed<RingNode[]>(() =>
       minors: layoutStarRow(palace.minor_stars, 9, 6),
       adj,
       footerY: adj.length > 1 ? 35 : 29,
-      agesText: palace.ages.join(','),
+      agesText: (palace.yearly_ages ?? palace.ages).join(','),
       pills: layoutPills(tagMap.value[palace.branch] ?? []),
     }
   }),
@@ -303,8 +303,11 @@ const infoLines = computed(() => {
         </text>
 
         <text :y="n.footerY" class="node-footer">
-          <tspan class="decadal">{{ n.palace.decadal_range[0] }}~{{ n.palace.decadal_range[1] }}</tspan>
-          <tspan class="ages" dx="4">{{ n.agesText }}</tspan>
+          <tspan class="ages">{{ n.agesText }}</tspan>
+        </text>
+        <!-- 大限年龄段独立一行：圆内最下方（三系徽标之下） -->
+        <text y="68" class="decadal-line">
+          {{ n.palace.decadal_range[0] }}~{{ n.palace.decadal_range[1] }}
         </text>
       </g>
     </g>
@@ -444,14 +447,16 @@ const infoLines = computed(() => {
   text-anchor: middle;
 }
 
-.decadal {
+.decadal-line {
   font-size: 8px;
   font-weight: 600;
   fill: var(--accent);
+  text-anchor: middle;
 }
 
+/* 流年岁序独占页脚行：字号由 8px 增至 9.5px（最长 30 字符 ≈128px，节点弦宽 132px 可容） */
 .ages {
-  font-size: 8px;
+  font-size: 9.5px;
   fill: var(--ink-faint);
 }
 

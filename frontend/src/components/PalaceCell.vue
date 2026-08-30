@@ -14,8 +14,8 @@ const decadalTag = computed(() => props.tags?.find((t) => t.kind === 'decadal'))
 const yearlyTag = computed(() => props.tags?.find((t) => t.kind === 'yearly'))
 const xiaoxianTag = computed(() => props.tags?.find((t) => t.kind === 'xiaoxian'))
 
-/** 流年岁序：虚岁超 100 的不显示。 */
-const agesText = computed(() => props.palace.ages.filter((a) => a <= 100).join(','))
+/** 流年岁序：太岁入宫虚岁（10 个）；旧快照无 yearly_ages 时回退小限口径。 */
+const agesText = computed(() => (props.palace.yearly_ages ?? props.palace.ages).join(','))
 
 const MUTAGEN_CLASS: Record<string, string> = {
   禄: 'lu',
@@ -240,9 +240,9 @@ function mutagenClass(star: Star): string {
   white-space: nowrap;
 }
 
-/* 流年岁序：独立一行内完整显示（≤100 岁后最长 9 个数字 ≈26 字符，9px 不换行可容） */
+/* 流年岁序：独立一行内完整显示（10 个虚岁最长 ≈33 字符，8.5px 不换行可容） */
 .ages {
-  font-size: 9px;
+  font-size: 8.5px;
   color: var(--ink-faint);
   white-space: nowrap;
 }

@@ -199,8 +199,6 @@ onMounted(async () => {
 <template>
   <div class="layout">
     <aside class="sidebar">
-      <BirthForm ref="formRef" @calculated="onCalculated" @saved="refreshList" />
-
       <SavedChartsPanel
         :items="saved"
         :error="listError"
@@ -208,6 +206,8 @@ onMounted(async () => {
         @manage="manageOpen = true"
         @import-file="onImportFile"
       />
+
+      <BirthForm ref="formRef" @calculated="onCalculated" @saved="refreshList" />
 
       <ManageChartsDialog
         :open="manageOpen"

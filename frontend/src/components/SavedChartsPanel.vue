@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { ChartSummary } from '../api'
 import { chartMeta, matchChart } from '../savedSearch'
 
@@ -24,6 +24,35 @@ const query = ref('')
 const filtered = computed(() =>
   query.value.trim() ? props.items.filter((it) => matchChart(it, query.value)) : [],
 )
+// 键盘导航：↑/↓ 在匹配结果间移动，回车加载当前选中项（高亮跟随鼠标悬停）
+const activeIndex = ref(0)
+const listRef = ref<HTMLElement>()
+
+watch(query, () => {
+  activeIndex.value = 0
+})
+// 结果集因保存/删除变化时防止下标越界
+watch(
+  () => filtered.value.length,
+  (n) => {
+    if (activeIndex.value >= n) activeIndex.value = 0
+  },
+)
+
+function onSearchKeydown(e: KeyboardEvent) {
+  const n = filtered.value.length
+  if (n === 0) return
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault()
+    activeIndex.value = (activeIndex.value + (e.key === 'ArrowDown' ? 1 : -1) + n) % n
+    nextTick(() =>
+      listRef.value?.children[activeIndex.value]?.scrollIntoView({ block: 'nearest' }),
+    )
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    emit('select', filtered.value[activeIndex.value])
+  }
+}
 
 const importInput = ref<HTMLInputElement>()
 
@@ -55,6 +84,11 @@ function onImportChange(e: Event) {
       class="search-input"
       placeholder="姓名或出生日期，如 19840620"
       aria-label="检索已有命盘"
+      role="combobox"
+      aria-expanded="true"
+      aria-controls="saved-listbox"
+      :aria-activedescendant="filtered.length ? `saved-opt-${filtered[activeIndex]?.chart_id}` : undefined"
+      @keydown="onSearchKeydown"
     />
 
     <p v-if="error" class="saved-error">{{ error }}</p>
@@ -62,9 +96,23 @@ function onImportChange(e: Event) {
     <template v-else>
       <p v-if="!query.trim()" class="saved-empty">共 {{ items.length }} 盘，输入条件自动匹配。</p>
       <p v-else-if="filtered.length === 0" class="saved-empty">无匹配结果，换个关键字试试。</p>
-      <ul v-else class="saved-list">
-        <li v-for="item in filtered" :key="item.chart_id" class="saved-row">
-          <button type="button" class="saved-item" @click="emit('select', item)">
+      <ul v-else id="saved-listbox" ref="listRef" class="saved-list" role="listbox">
+        <li
+          v-for="(item, i) in filtered"
+          :key="item.chart_id"
+          class="saved-row"
+          role="option"
+          :aria-selected="i === activeIndex"
+        >
+          <button
+            :id="`saved-opt-${item.chart_id}`"
+            type="button"
+            class="saved-item"
+            :class="{ active: i === activeIndex }"
+            tabindex="-1"
+            @click="emit('select', item)"
+            @mouseenter="activeIndex = i"
+          >
             <span class="saved-person">{{ item.person }}</span>
             <span class="saved-meta">{{ chartMeta(item) }}</span>
           </button>
@@ -179,6 +227,10 @@ function onImportChange(e: Event) {
 .saved-item:hover {
   background: #f2ecdc;
   border-color: var(--line);
+}
+.saved-item.active {
+  background: #f2ecdc;
+  border-color: var(--accent);
 }
 
 .saved-item:focus-visible {

@@ -12,8 +12,10 @@
 - 命身四星解析区分四重身份：命宫主星（坐命正曜）≠ 命主（命宫支查表），
   身宫主星（身宫所落宫主星）≠ 身主（生年支查表）；同名星曜合并为一卡多角色。
   命宫/身宫为空宫（无正曜）时借对宫主星安宫论之，并注明借星规则。
-- 命主/身主断语为两层组合：静态断语（先天禀赋/一生主题/修持方向）
-  + 逐盘动态注记（落宫领域、亮度档位、生年四化）；命身关系总述含命身同宫与呼应。
+- 命主/身主断语为三层组合：静态断语（先天禀赋/一生主题/修持方向）
+  + 逐盘动态注记（落宫领域、亮度档位、生年四化）
+  + 关系注记（同宫主星牵引、特定同宫组合与破格、同宫化忌/煞曜/吉曜、左右夹宫格局）；
+  命身关系总述含命身同宫与呼应。
 """
 
 from __future__ import annotations
@@ -48,6 +50,49 @@ _PALACE_DOMAIN = {
     "田宅": "不动产与家庭环境",
     "福德": "精神享受与内在福气",
     "父母": "长辈缘分与上司关系",
+}
+_SHA_STARS = ("擎羊", "陀罗", "火星", "铃星", "地空", "地劫")
+_JI_STARS = ("左辅", "右弼", "文昌", "文曲", "天魁", "天钺")
+
+
+def _sorted_key(a: str, b: str) -> tuple[str, str]:
+    """双星组合键统一为排序后元组（与 PAIR_NOTES 同口径）。"""
+    return (a, b) if a <= b else (b, a)
+
+
+# 命主/身主相关的特定同宫组合：格局性强、通用模板难以概括者（键为排序后星名元组）
+_COPALACE_NOTES: dict[tuple[str, str], str] = {
+    _sorted_key("禄存", "天马"): "禄马交驰：天马同宫，财禄随行动而来，宜动中求财、异地开拓，行动即财源",
+    _sorted_key("贪狼", "火星"): "火贪同宫：主暴发机遇，运逢之则突飞猛进，然暴起防暴落，切忌孤注一掷",
+    _sorted_key("贪狼", "铃星"): "铃贪同宫：主暗发机遇，偏门技艺可致财，守正则为奇功、走偏则为祸端",
+}
+
+# 左右夹宫格局（两星分守某宫左右邻宫；键为排序后星名元组，值为格局名与断语）
+_CLAMP_NOTES: dict[tuple[str, str], tuple[str, str]] = {
+    _sorted_key("擎羊", "陀罗"): (
+        "羊陀夹",
+        "两煞前后夹制，进退多牵制，防牵连暗耗与因财起祸，处世宜守不宜攻",
+    ),
+    _sorted_key("火星", "铃星"): (
+        "火铃夹",
+        "暴烈之气夹逼，境遇与情绪易走极端，须防突发变故，凡事预留余地",
+    ),
+    _sorted_key("地空", "地劫"): (
+        "空劫夹",
+        "空亡之气夹制，财禄谋划易成空中楼阁，宜务实业、忌投机",
+    ),
+    _sorted_key("天魁", "天钺"): (
+        "魁钺夹贵",
+        "两贵人夹辅，一生多得提携扶持，遇难有援",
+    ),
+    _sorted_key("左辅", "右弼"): (
+        "辅弼夹",
+        "两辅夹侍，助力充沛，行事得人帮扶，格局因人和而增",
+    ),
+    _sorted_key("文昌", "文曲"): (
+        "昌曲夹",
+        "文气夹辅，利学业、文名与才艺，才情易得其显",
+    ),
 }
 
 
@@ -900,6 +945,88 @@ def _dynamic_note(chart: NatalChart, name: str, position_tpl: str) -> str:
     return "；".join(parts) + "。"
 
 
+def _context_note(chart: NatalChart, name: str) -> str:
+    """命主/身主的关系注记：同宫星曜（主星牵引/特定组合/化忌/煞/吉）与左右邻宫夹制。
+
+    静态断语描述星曜本性，本注记回答「此盘此星的实际处境」：本性须与处境合看，
+    如禄存逢化忌同宫则守财之义不存，不可只按本性断。
+    """
+    found = _find_star(chart, name)
+    if found is None:
+        return ""
+    _s, p = found
+    others = [x for x in (*p.major_stars, *p.minor_stars, *p.adjective_stars) if x.name != name]
+    other_names = {x.name for x in others}
+    domain = _PALACE_DOMAIN.get(p.name, p.name)
+    parts: list[str] = []
+
+    # 同宫主星牵引
+    co_majors = [m.name for m in p.major_stars if m.name != name]
+    if co_majors:
+        joined = "、".join(co_majors)
+        parts.append(
+            f"与{joined}同宫：{name}之发挥为此组合气质所牵引，宜并参{joined}落{_palace_label(p.name)}之解析"
+        )
+
+    # 特定同宫组合（禄马交驰 / 火贪 / 铃贪）
+    for other in sorted(other_names):
+        note = _COPALACE_NOTES.get(_sorted_key(name, other))
+        if note:
+            parts.append(note)
+    # 禄马交驰破格：化忌或空劫同宫则格破
+    if name in ("禄存", "天马") and {"禄存", "天马"} <= ({name} | other_names):
+        broken = sorted(
+            {f"{x.name}化忌" if x.mutagen == "忌" else x.name for x in others
+             if x.mutagen == "忌" or x.name in ("地空", "地劫")}
+        )
+        if broken:
+            parts.append(f"然{'、'.join(broken)}同宫，禄马交驰格破，动中求财亦多反复波折")
+
+    # 同宫化忌
+    for x in others:
+        if x.mutagen != "忌":
+            continue
+        if name == "禄存":
+            parts.append(
+                f"{x.name}化忌同宫：禄逢冲破，守财积蓄之义大破——财来财去、因财耗神，"
+                "一生理财宜格外稳健，忌担保借贷与投机"
+            )
+        else:
+            parts.append(
+                f"{x.name}化忌同宫：忌星同缠，{domain}多执念与反复，是非阻力并增，"
+                f"{name}之力为之所制，行事切忌硬碰"
+            )
+
+    # 同宫煞曜
+    sha = [x.name for x in others if x.name in _SHA_STARS]
+    if name == "禄存" and any(x in ("地空", "地劫") for x in sha):
+        parts.append("禄落空亡：空劫与禄存同宫，财禄成空，守财之力尽失，宜以专业技艺立身而非守成")
+        sha = [x for x in sha if x not in ("地空", "地劫")]
+    if sha:
+        parts.append(f"煞曜{'、'.join(sha)}同宫：煞气相侵，{domain}多压力与波折，宜稳守缓图，切忌急进躁动")
+
+    # 同宫吉曜
+    ji = [x.name for x in others if x.name in _JI_STARS]
+    if ji:
+        parts.append(f"吉曜{'、'.join(ji)}同宫：贵人帮扶、凶性得缓，{domain}多得助力")
+
+    # 左右夹宫
+    prev_p = chart.palaces[(p.index + 11) % 12]
+    next_p = chart.palaces[(p.index + 1) % 12]
+    prev_names = {s.name for s in (*prev_p.major_stars, *prev_p.minor_stars, *prev_p.adjective_stars)}
+    next_names = {s.name for s in (*next_p.major_stars, *next_p.minor_stars, *next_p.adjective_stars)}
+    for (a, b), (title, text) in _CLAMP_NOTES.items():
+        if a in prev_names and b in next_names:
+            sides = f"{a}守{_palace_label(prev_p.name)}、{b}守{_palace_label(next_p.name)}"
+        elif b in prev_names and a in next_names:
+            sides = f"{b}守{_palace_label(prev_p.name)}、{a}守{_palace_label(next_p.name)}"
+        else:
+            continue
+        parts.append(f"{title}：{sides}，{text}")
+
+    return "；".join(parts) + "。" if parts else ""
+
+
 def _relation_note(chart: NatalChart) -> str:
     """命身呼应：命身同主 / 命主入身宫 / 身主入命宫。"""
     sk = chart.skeleton
@@ -954,7 +1081,7 @@ def analyze_soul_body(chart: NatalChart) -> SoulBodyNotes:
     # 命主（静态断语 + 落宫/亮度/四化动态注记）
     found = _find_star(chart, sk.soul)
     soul_note = SOUL_STAR_NOTES.get(sk.soul, f"命主{sk.soul}：断语待知识库补充")
-    soul_note += _dynamic_note(chart, sk.soul, _SOUL_POSITION_TPL)
+    soul_note += _dynamic_note(chart, sk.soul, _SOUL_POSITION_TPL) + _context_note(chart, sk.soul)
     add(sk.soul, "命主", soul_note, found[0] if found else None, False)
     # 身宫主星（空宫借对宫主星）
     body_majors, body_src = _palace_majors(chart, body_palace)
@@ -968,7 +1095,7 @@ def analyze_soul_body(chart: NatalChart) -> SoulBodyNotes:
     found = _find_star(chart, sk.body)
     body_note = BODY_STAR_NOTES.get(sk.body, f"身主{sk.body}：断语待知识库补充")
     if sk.body != sk.soul:
-        body_note += _dynamic_note(chart, sk.body, _BODY_POSITION_TPL)
+        body_note += _dynamic_note(chart, sk.body, _BODY_POSITION_TPL) + _context_note(chart, sk.body)
     add(sk.body, "身主", body_note, found[0] if found else None, False)
 
     stars = tuple(

@@ -19,3 +19,8 @@ serde_json = "1"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+# 减少调试构建体积：只保留行号级调试信息（不影响 backtrace，省空间明显）
+# 增量编译在 dev profile 下默认开启，无需显式配置
+[profile.dev]
+debug = 1

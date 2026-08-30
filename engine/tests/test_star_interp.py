@@ -200,3 +200,42 @@ def test_pair_notes_cover_all_dual_combos():
     for key in PAIR_NOTES:
         assert len(key) == 2 and list(key) == sorted(key)
         assert all(name in STAR_KNOWLEDGE for name in key)
+
+# CN 命盘（1984-10-03 未时女）：命主禄存落官禄，同宫太阳化忌+天马+火星+右弼，
+# 左右田宅陀罗、交友擎羊夹制——静态「守财」断语必须被实际处境修正的完整样本
+CN_CHART = calculate(BirthInput(1984, 10, 3, 12, "女"))
+
+
+def _role_note(notes, role: str) -> str:
+    entry = next(s for s in notes.stars if role in s.roles)
+    return entry.notes[entry.roles.index(role)]
+
+
+def test_soul_context_note_reflects_clamped_broken_lucun():
+    """命主禄存：化忌同宫（禄逢冲破）+ 羊陀夹须成文，静态守财断语不得孤立成立。"""
+    note = _role_note(analyze_soul_body(CN_CHART), "命主")
+    assert CN_CHART.skeleton.soul == "禄存"
+    assert "落官禄宫" in note
+    assert "禄逢冲破" in note and "太阳化忌" in note
+    assert "羊陀夹" in note and "陀罗守田宅宫" in note and "擎羊守交友宫" in note
+    assert "禄马交驰" in note and "格破" in note
+    assert "煞曜火星同宫" in note and "吉曜右弼同宫" in note
+
+
+def test_body_context_note_clamp_without_lucun_specials():
+    """身主火星：同宫化忌与羊陀夹须成文；不涉禄存，不得出现禄逢冲破/禄马破格。"""
+    note = _role_note(analyze_soul_body(CN_CHART), "身主")
+    assert CN_CHART.skeleton.body == "火星"
+    assert "羊陀夹" in note
+    assert "太阳化忌同宫" in note
+    assert "禄逢冲破" not in note and "禄马交驰" not in note
+
+
+def test_relation_tables_use_sorted_known_star_keys():
+    # 关系注记表自检：键为排序后双星组合且星名均在知识库
+    from ziwei_engine.rules.star_interp import _CLAMP_NOTES, _COPALACE_NOTES
+
+    for table in (_CLAMP_NOTES, _COPALACE_NOTES):
+        for key in table:
+            assert len(key) == 2 and list(key) == sorted(key)
+            assert all(name in STAR_KNOWLEDGE for name in key)

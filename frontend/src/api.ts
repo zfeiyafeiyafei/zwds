@@ -20,6 +20,8 @@ export interface Palace {
   suiqian12: string
   jiangqian12: string
   ages: number[]
+  /** 本宫流年虚岁（10 个）；旧快照可能缺失，回退用 ages */
+  yearly_ages?: number[]
   decadal_range: [number, number]
   major_stars: Star[]
   minor_stars: Star[]

@@ -56,7 +56,7 @@ def _place_stars(
 
 
 def _mark_periods(sk: ChartSkeleton, cal: CalendarInfo, gender: str) -> None:
-    """宫内周期标注：来因宫、四组神煞、大限区间、小限虚岁（iztro_rules.md §4/§11/§12/§13）。"""
+    """宫内周期标注：来因宫、四组神煞、大限区间、小限/流年虚岁（iztro_rules.md §4/§11/§12/§13）。"""
     lucun_branch = LUCUN_BY_GAN[cal.year_gan]
     cs = adj.changsheng12(sk.class_number, cal.year_zhi, gender)
     bs = adj.boshi12(lucun_branch, cal.year_zhi, gender)
@@ -81,6 +81,9 @@ def _mark_periods(sk: ChartSkeleton, cal: CalendarInfo, gender: str) -> None:
         # 小限（§13.1）：起宫 + 男顺女逆，每宫 10 个虚岁
         offset = ((branch - xiaoxian_start) * xiaoxian_dir) % 12
         palace.ages = [offset + 1 + 12 * j for j in range(10)]
+        # 流年虚岁：太岁每 12 年重入本宫，虚岁 ≡ (宫支 - 生年支) + 1 (mod 12)
+        yearly_offset = (branch - cal.year_zhi) % 12
+        palace.yearly_ages = [yearly_offset + 1 + 12 * j for j in range(10)]
 
 
 def calculate(birth: BirthInput) -> NatalChart:

@@ -50,6 +50,7 @@ class Palace:
     suiqian12: str = ""  # 岁前十二神
     jiangqian12: str = ""  # 将前十二神
     ages: list = field(default_factory=list)  # 本宫小限虚岁（10 个）
+    yearly_ages: list = field(default_factory=list)  # 本宫流年虚岁（10 个，太岁入宫）
     decadal_range: tuple = (0, 0)  # 本宫大限虚岁区间 [起, 止]
 
 

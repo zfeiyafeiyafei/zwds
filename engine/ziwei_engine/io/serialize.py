@@ -54,6 +54,7 @@ def chart_to_dict(chart: NatalChart, *, display: dict | None = None) -> dict[str
             "suiqian12": getattr(p, "suiqian12", ""),
             "jiangqian12": getattr(p, "jiangqian12", ""),
             "ages": getattr(p, "ages", []),
+            "yearly_ages": getattr(p, "yearly_ages", []),
             "decadal_range": list(getattr(p, "decadal_range", ())),
             "major_stars": [_star(s) for s in p.major_stars],
             "minor_stars": [_star(s) for s in p.minor_stars],

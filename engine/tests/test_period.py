@@ -58,3 +58,16 @@ def test_periods(fixture: Path) -> None:
     iz_yearly_mutagen = ref["yearly"]["mutagen"]  # [禄,权,科,忌] 星名
     my = birth_mutagens(year_gan)
     assert [s for s, _ in sorted(my.items(), key=lambda kv: "禄权科忌".index(kv[1]))] == iz_yearly_mutagen
+
+
+def test_yearly_ages_tai_sui_cycle() -> None:
+    """流年虚岁：生年支宫 1 岁起，太岁每 12 年重入本宫（与小限口径独立）。"""
+    from ziwei_engine.chart.natal import calculate
+
+    chart = calculate(BirthInput(1990, 5, 15, 6, "男"))
+    year_zhi = chart.calendar.year_zhi
+    for p in chart.palaces:
+        offset = (p.earthly_branch - year_zhi) % 12
+        assert p.yearly_ages == [offset + 1 + 12 * j for j in range(10)]
+    # 生年支宫必以虚岁 1 起
+    assert chart.palaces[year_zhi].yearly_ages[0] == 1
