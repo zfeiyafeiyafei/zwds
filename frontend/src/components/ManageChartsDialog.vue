@@ -75,7 +75,7 @@ const filtered = computed(() => props.items.filter((it) => matchChart(it, query.
 .dialog-mask {
   position: fixed;
   inset: 0;
-  background: rgba(30, 26, 20, 0.45);
+  background: var(--mask);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,9 +89,9 @@ const filtered = computed(() => props.items.filter((it) => matchChart(it, query.
   gap: 12px;
   padding: 20px;
   background: var(--panel);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(30, 26, 20, 0.25);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .dialog-head {
@@ -103,35 +103,37 @@ const filtered = computed(() => props.items.filter((it) => matchChart(it, query.
 .dialog-title {
   margin: 0;
   font-size: 16px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
 .close-btn {
   padding: 2px 8px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-faint);
   font-size: 13px;
 }
 
 .close-btn:hover {
-  background: #f2ecdc;
+  background: var(--hover-bg);
   border-color: var(--line);
   color: var(--accent);
 }
 
 .search-input {
-  padding: 6px 8px;
+  padding: 7px 10px;
   font-size: 13px;
-  background: #fff;
+  background: var(--input-bg);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .search-input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .empty {
@@ -157,11 +159,11 @@ const filtered = computed(() => props.items.filter((it) => matchChart(it, query.
   gap: 2px;
   padding: 4px 6px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .manage-row:hover {
-  background: #f2ecdc;
+  background: var(--hover-bg);
   border-color: var(--line);
 }
 
@@ -172,7 +174,7 @@ const filtered = computed(() => props.items.filter((it) => matchChart(it, query.
   flex-direction: column;
   gap: 1px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .row-info:focus-visible {
@@ -195,14 +197,14 @@ const filtered = computed(() => props.items.filter((it) => matchChart(it, query.
   width: 26px;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-faint);
   font-size: 13px;
 }
 
 .row-btn:hover {
-  background: #fff;
+  background: var(--hover-bg);
   border-color: var(--line);
   color: var(--accent);
 }

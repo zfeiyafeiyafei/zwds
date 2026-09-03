@@ -101,7 +101,10 @@ function mutagenClass(star: Star): string {
 }
 
 .palace.soul {
-  background: #faf3e2;
+  background: var(--soul-bg);
+}
+.palace:hover {
+  background: var(--hover-bg);
 }
 
 .palace-head {
@@ -125,7 +128,7 @@ function mutagenClass(star: Star): string {
   padding: 0 3px;
   margin-left: 2px;
   border: 1px solid var(--accent);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: var(--accent);
   vertical-align: 1px;
 }
@@ -187,7 +190,7 @@ function mutagenClass(star: Star): string {
   padding: 1px 3px;
   margin-left: 2px;
   border-radius: 50%;
-  color: #fdfaf2;
+  color: var(--on-badge);
   vertical-align: 2px;
 }
 
@@ -251,7 +254,7 @@ function mutagenClass(star: Star): string {
   font-size: 10px;
   line-height: 1.4;
   padding: 0 5px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   border: 1px solid currentColor;
   white-space: nowrap;
 }
@@ -272,7 +275,7 @@ function mutagenClass(star: Star): string {
    必须位于上方配色规则之后，同特异性下保证文字色生效。 */
 .period-tag.filled {
   border-color: transparent;
-  color: #f8f5ec;
+  color: var(--on-badge);
 }
 
 .period-tag.filled.decadal {

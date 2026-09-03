@@ -181,7 +181,7 @@ const lineSegments = computed(() => {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(4, minmax(0, 1fr));
   gap: 0;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
   background: var(--line);
   grid-auto-flow: dense;
 }
@@ -210,7 +210,7 @@ const lineSegments = computed(() => {
 .chart-grid > :deep(.palace.selected) {
   outline: 1.5px solid var(--vermilion);
   outline-offset: -1.5px;
-  background: #f6e9da;
+  background: var(--selected-bg);
 }
 
 .center-panel {

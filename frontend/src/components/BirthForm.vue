@@ -104,13 +104,15 @@ defineExpose({ onCalculate })
   padding: 16px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .form-title {
   margin: 0 0 4px;
   font-size: 16px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
 .field {
@@ -123,16 +125,17 @@ defineExpose({ onCalculate })
 
 .field input,
 .field select {
-  padding: 6px 8px;
-  background: #fff;
+  padding: 7px 10px;
+  background: var(--input-bg);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .field input:focus-visible,
 .field select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .actions {
@@ -144,19 +147,25 @@ defineExpose({ onCalculate })
   flex: 1;
   padding: 7px 0;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--ink);
+  font-weight: 500;
 }
 
 .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #f8f5ec;
+  color: var(--on-accent);
 }
 
 .btn:hover:not(:disabled) {
   filter: brightness(0.96);
+}
+.btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .btn:disabled {

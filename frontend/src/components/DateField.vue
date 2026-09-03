@@ -164,22 +164,23 @@ const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 .date-field input {
   flex: 1;
   min-width: 0;
-  padding: 6px 8px;
-  background: #fff;
+  padding: 7px 10px;
+  background: var(--input-bg);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .date-field input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .toggle {
   flex: none;
   width: 26px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--ink-soft);
   font-size: 12px;
@@ -199,8 +200,8 @@ const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
   padding: 8px;
   background: var(--panel);
   border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(30, 26, 20, 0.2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .picker-head {
@@ -214,7 +215,7 @@ const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
   width: 24px;
   padding: 2px 0;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-soft);
   font-size: 13px;
@@ -222,7 +223,7 @@ const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 }
 
 .picker-head button:hover {
-  background: #f2ecdc;
+  background: var(--hover-bg);
   border-color: var(--line);
   color: var(--accent);
 }
@@ -250,13 +251,13 @@ const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
   text-align: center;
   font-size: 12px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink);
 }
 
 .day:hover {
-  background: #f2ecdc;
+  background: var(--hover-bg);
   border-color: var(--line);
 }
 
@@ -266,7 +267,7 @@ const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 
 .day.selected {
   background: var(--accent);
-  color: #f8f5ec;
+  color: var(--on-accent);
 }
 
 .day-blank {

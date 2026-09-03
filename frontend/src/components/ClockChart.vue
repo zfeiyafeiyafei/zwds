@@ -337,8 +337,10 @@ const infoLines = computed(() => {
   max-width: calc(100vh - 132px);
   margin: 0 auto;
   height: auto;
-  background: var(--paper);
-  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
 }
 
 .relation-lines line {
@@ -359,11 +361,11 @@ const infoLines = computed(() => {
 }
 
 .node-circle.soul {
-  fill: #faf3e2;
+  fill: var(--soul-bg);
 }
 
 .node-circle.selected {
-  fill: #f6e9da;
+  fill: var(--selected-bg);
   stroke: var(--vermilion);
   stroke-width: 1.5;
 }
@@ -418,7 +420,7 @@ const infoLines = computed(() => {
 
 .badge-text {
   font-size: 8px;
-  fill: #fdfaf2;
+  fill: var(--on-badge);
   text-anchor: middle;
   dominant-baseline: central;
 }
@@ -542,6 +544,6 @@ const infoLines = computed(() => {
 }
 
 .period-pill-text.filled {
-  fill: #f8f5ec;
+  fill: var(--on-badge);
 }
 </style>

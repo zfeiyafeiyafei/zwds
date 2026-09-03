@@ -103,17 +103,19 @@ function stripRolePrefix(role: string, starName: string, note: string): string {
   padding: 12px 14px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   align-self: stretch;
+  box-shadow: var(--shadow-sm);
 }
 
 .panel-title {
   margin: 0 0 10px;
   font-size: 14px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.02em;
   display: flex;
   align-items: baseline;
   gap: 8px;
+  font-weight: 600;
 }
 
 .panel-empty {
@@ -141,10 +143,10 @@ function stripRolePrefix(role: string, starName: string, note: string): string {
 
 .star-card {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 8px 10px;
   margin-bottom: 8px;
-  background: #fdfaf3;
+  background: var(--surface-2);
 }
 
 .star-head {
@@ -167,28 +169,28 @@ function stripRolePrefix(role: string, starName: string, note: string): string {
 .chip {
   font-size: 10px;
   padding: 0 5px;
-  border-radius: 3px;
-  background: #f2ecdc;
+  border-radius: var(--radius-sm);
+  background: var(--chip-bg);
   color: var(--ink-soft);
 }
 
 .chip.bright {
-  background: #e8f0e4;
+  background: var(--chip-accent-bg);
   color: var(--accent);
 }
 
 .chip.mutagen {
-  background: #f6e3d8;
+  background: var(--chip-vermilion-bg);
   color: var(--vermilion);
 }
 
 .chip.role {
-  background: #e8f0e4;
+  background: var(--chip-accent-bg);
   color: var(--accent);
 }
 
 .chip.role.body {
-  background: #f6e3d8;
+  background: var(--chip-vermilion-bg);
   color: var(--vermilion);
 }
 

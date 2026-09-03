@@ -1,19 +1,72 @@
 :root {
-  /* 纸质底色 + 墨色：传统命盘的暖调 */
-  --paper: #f4efe4;
-  --panel: #fbf8f0;
-  --ink: #2e2921;
-  --ink-soft: #6f675a;
-  --ink-faint: #a29781;
-  --line: #d9d0bc;
-  --line-strong: #b8ab8e;
-  --vermilion: #b3372a; /* 主星红 */
-  --vermilion-deep: #8c2318; /* 化忌加深 */
-  --accent: #2f5d50;
-  --badge-lu: #2e7d32;
-  --badge-quan: #7b3fae;
-  --badge-ke: #1a5fb4;
-  --badge-ji: #b3372a;
+  /* 浅色主题：现代中性灰白底 + 靛蓝强调（Linear/Notion 风格） */
+  --paper: #f5f6f8; /* 页面底色 */
+  --panel: #ffffff; /* 面板表面 */
+  --surface: #ffffff;
+  --surface-2: #f6f7f9; /* 面板内嵌卡片 */
+  --input-bg: #ffffff;
+  --ink: #1f2329;
+  --ink-soft: #565e6a;
+  --ink-faint: #6b7280;
+  --line: #e4e6eb;
+  --line-strong: #d3d7de;
+  --hover-bg: #eef0f4;
+  --selected-bg: #fdf0ee; /* 选中宫位底色（朱砂淡染） */
+  --soul-bg: #eef0fe; /* 命宫高亮 */
+  --vermilion: #d43d33; /* 主星红 */
+  --vermilion-deep: #b0271f; /* 化忌加深 */
+  --accent: #6366f1;
+  --on-accent: #ffffff; /* 强调色上的文字 */
+  --on-badge: #ffffff; /* 徽标底色上的文字 */
+  --badge-lu: #16a34a;
+  --badge-quan: #7c3aed;
+  --badge-ke: #2563eb;
+  --badge-ji: #d43d33;
+  --chip-bg: #eff0f3;
+  --chip-accent-bg: #eceefe;
+  --chip-vermilion-bg: #fdecea;
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 10px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.14);
+  --ring: 0 0 0 3px rgba(99, 102, 241, 0.28); /* focus 光环 */
+  --mask: rgba(15, 18, 25, 0.4); /* 弹窗遮罩 */
+}
+
+[data-theme='dark'] {
+  /* 深色主题：深蓝灰底，面板略亮，强调色提亮 */
+  --paper: #0f1115;
+  --panel: #171a21;
+  --surface: #171a21;
+  --surface-2: #1e222b;
+  --input-bg: #12151b;
+  --ink: #e9ebef;
+  --ink-soft: #b3b9c4;
+  --ink-faint: #9aa1ad;
+  --line: #2a2f3a;
+  --line-strong: #3a4150;
+  --hover-bg: #232833;
+  --selected-bg: #3a262b;
+  --soul-bg: #232743;
+  --vermilion: #f87171;
+  --vermilion-deep: #fca5a5;
+  --accent: #818cf8;
+  --on-accent: #14162b;
+  --on-badge: #16181d;
+  --badge-lu: #4ade80;
+  --badge-quan: #a78bfa;
+  --badge-ke: #60a5fa;
+  --badge-ji: #f87171;
+  --chip-bg: #262b35;
+  --chip-accent-bg: #282e4e;
+  --chip-vermilion-bg: #3c2629;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --ring: 0 0 0 3px rgba(129, 140, 248, 0.4);
+  --mask: rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -28,9 +81,25 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family:
-    'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
+    system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
   font-size: 14px;
   line-height: 1.5;
+}
+
+/* 主题切换与常规着色的平滑过渡 */
+body {
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke, outline-color;
+  transition-duration: 0.18s;
+  transition-timing-function: ease;
 }
 
 #app {
@@ -46,4 +115,13 @@ input,
 select {
   font: inherit;
   color: var(--ink);
+}
+
+::placeholder {
+  color: var(--ink-faint);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }

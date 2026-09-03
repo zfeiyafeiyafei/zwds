@@ -28,6 +28,29 @@ const layout = ref<LayoutKey>(
   localStorage.getItem(LAYOUT_STORAGE_KEY) === 'clock' ? 'clock' : 'grid',
 )
 watch(layout, (v) => localStorage.setItem(LAYOUT_STORAGE_KEY, v))
+// ---- 主题切换：localStorage 持久化，未选择时跟随系统 ----
+type ThemeKey = 'light' | 'dark'
+const THEME_STORAGE_KEY = 'zwds-theme'
+
+const storedTheme = localStorage.getItem(THEME_STORAGE_KEY)
+const theme = ref<ThemeKey>(
+  storedTheme === 'dark' || storedTheme === 'light'
+    ? storedTheme
+    : window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light',
+)
+
+function applyTheme(v: ThemeKey) {
+  document.documentElement.dataset.theme = v
+}
+applyTheme(theme.value)
+
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  localStorage.setItem(THEME_STORAGE_KEY, theme.value)
+  applyTheme(theme.value)
+}
 
 const formRef = ref<InstanceType<typeof BirthForm>>()
 const chart = ref<ChartResult | null>(null)
@@ -258,10 +281,20 @@ onMounted(async () => {
           <button v-if="chart" type="button" class="copy-btn" @click="onCopyJson">
             {{ copyHint || '复制 JSON' }}
           </button>
+          <button
+            type="button"
+            class="theme-toggle"
+            :title="theme === 'dark' ? '切换为浅色主题' : '切换为深色主题'"
+            :aria-label="theme === 'dark' ? '切换为浅色主题' : '切换为深色主题'"
+            @click="toggleTheme"
+          >
+            {{ theme === 'dark' ? '☀' : '☾' }}
+          </button>
         </div>
       </div>
 
       <div class="main-row">
+        <PatternPanel v-if="chart?.analysis" :patterns="chart.analysis.patterns" />
         <div class="chart-col">
           <template v-if="chart">
             <ChartGrid
@@ -284,7 +317,6 @@ onMounted(async () => {
             />
           </template>
           <p v-else class="loading">排盘中…</p>
-          <PatternPanel v-if="chart?.analysis" :patterns="chart.analysis.patterns" />
         </div>
         <StarDetail
           v-if="chart?.analysis"
@@ -350,9 +382,10 @@ onMounted(async () => {
 .layout-switch {
   display: inline-flex;
   border: 1px solid var(--line-strong);
-  border-radius: 6px;
+  border-radius: var(--radius);
   overflow: hidden;
   background: var(--panel);
+  box-shadow: var(--shadow-sm);
 }
 
 .layout-switch button {
@@ -369,7 +402,7 @@ onMounted(async () => {
 
 .layout-switch button.active {
   background: var(--accent);
-  color: #f8f5ec;
+  color: var(--on-accent);
 }
 
 .layout-switch button:focus-visible {
@@ -386,7 +419,7 @@ onMounted(async () => {
 .copy-btn {
   padding: 5px 12px;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--ink-soft);
   font-size: 12px;
@@ -396,7 +429,7 @@ onMounted(async () => {
 .copy-btn:hover {
   color: var(--accent);
   border-color: var(--accent);
-  background: #f2ecdc;
+  background: var(--hover-bg);
 }
 
 .period-nav {
@@ -408,7 +441,7 @@ onMounted(async () => {
 .period-nav button {
   padding: 4px 10px;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--ink-soft);
   font-size: 14px;
@@ -416,7 +449,7 @@ onMounted(async () => {
 }
 
 .period-nav button:hover {
-  background: #f2ecdc;
+  background: var(--hover-bg);
 }
 
 .period-nav .date-field {
@@ -436,6 +469,31 @@ onMounted(async () => {
 .period-busy {
   font-size: 12px;
   color: var(--ink-faint);
+}
+.theme-toggle {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--hover-bg);
+}
+
+.theme-toggle:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .loading {

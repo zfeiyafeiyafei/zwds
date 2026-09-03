@@ -115,7 +115,7 @@ async function onSave() {
 .dialog-mask {
   position: fixed;
   inset: 0;
-  background: rgba(30, 26, 20, 0.45);
+  background: var(--mask);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,15 +129,16 @@ async function onSave() {
   gap: 12px;
   padding: 20px;
   background: var(--panel);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(30, 26, 20, 0.25);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .dialog-title {
   margin: 0;
   font-size: 16px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
 .field {
@@ -150,16 +151,17 @@ async function onSave() {
 
 .field input,
 .field select {
-  padding: 6px 8px;
-  background: #fff;
+  padding: 7px 10px;
+  background: var(--input-bg);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .field input:focus-visible,
 .field select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .hint {
@@ -183,19 +185,25 @@ async function onSave() {
   flex: 1;
   padding: 7px 0;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--ink);
+  font-weight: 500;
 }
 
 .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #f8f5ec;
+  color: var(--on-accent);
 }
 
 .btn:hover:not(:disabled) {
   filter: brightness(0.96);
+}
+.btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .btn:disabled {

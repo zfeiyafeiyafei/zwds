@@ -33,17 +33,24 @@ function strengthClass(s: string): string {
 
 <style scoped>
 .pattern-panel {
-  margin-top: 16px;
-  padding: 14px 16px;
+  /* 左侧栏：与右侧 StarDetail 镜像对应 */
+  width: 340px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 12px 14px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
+  align-self: stretch;
+  box-shadow: var(--shadow-sm);
 }
 
 .panel-title {
   margin: 0 0 10px;
   font-size: 14px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
 .panel-empty {
@@ -56,16 +63,16 @@ function strengthClass(s: string): string {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .pattern-card {
   border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 10px 12px;
-  background: #fdfaf3;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  background: var(--surface-2);
 }
 
 .pattern-head {
@@ -121,8 +128,8 @@ function strengthClass(s: string): string {
 .evidence-chip {
   font-size: 11px;
   padding: 1px 6px;
-  border-radius: 3px;
-  background: #f2ecdc;
+  border-radius: var(--radius-sm);
+  background: var(--chip-bg);
   color: var(--ink-soft);
 }
 

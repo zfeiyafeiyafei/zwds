@@ -138,7 +138,8 @@ function onImportChange(e: Event) {
   padding: 16px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .saved-head {
@@ -151,7 +152,8 @@ function onImportChange(e: Event) {
 .saved-title {
   margin: 0;
   font-size: 14px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
 .import-btn {
@@ -160,7 +162,7 @@ function onImportChange(e: Event) {
   color: var(--ink-soft);
   background: transparent;
   border: 1px dashed var(--line-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .import-btn:hover {
@@ -172,16 +174,17 @@ function onImportChange(e: Event) {
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 8px;
-  padding: 6px 8px;
+  padding: 7px 10px;
   font-size: 13px;
-  background: #fff;
+  background: var(--input-bg);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .search-input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .saved-row {
@@ -221,21 +224,22 @@ function onImportChange(e: Event) {
   text-align: left;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .saved-item:hover {
-  background: #f2ecdc;
+  background: var(--hover-bg);
   border-color: var(--line);
 }
 .saved-item.active {
-  background: #f2ecdc;
+  background: var(--hover-bg);
   border-color: var(--accent);
 }
 
 .saved-item:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .saved-person {
@@ -260,13 +264,13 @@ function onImportChange(e: Event) {
   color: var(--ink-soft);
   background: transparent;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .manage-btn:hover:not(:disabled) {
   color: var(--accent);
   border-color: var(--accent);
-  background: #f2ecdc;
+  background: var(--hover-bg);
 }
 
 .manage-btn:disabled {
