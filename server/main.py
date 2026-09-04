@@ -144,6 +144,37 @@ def list_charts() -> list[dict]:
         ]
 
 
+@app.get("/api/charts/export-all")
+def export_all_charts() -> Response:
+    """导出全部命盘为单个 JSON 文件（快照数组 + 元信息，供备份/迁移）。"""
+    from datetime import date
+
+    from sqlalchemy import select
+
+    with _session_factory() as session:
+        rows = session.execute(select(Chart).order_by(Chart.id)).scalars().all()
+        charts = [
+            {
+                "chart_id": row.id,
+                "person": session.get(Person, row.person_id).name,
+                "snapshot": load_snapshot(session, row.id),
+            }
+            for row in rows
+        ]
+    payload = {
+        "version": ENGINE_VERSION,
+        "exported_at": date.today().isoformat(),
+        "count": len(charts),
+        "charts": charts,
+    }
+    filename = f"ziwei_all_{date.today().isoformat()}.json"
+    return Response(
+        content=json.dumps(payload, ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
+    )
+
+
 @app.get("/api/charts/{chart_id}")
 def get_chart(chart_id: int) -> dict:
     """读取命盘快照（完整 JSON，可直接渲染或导出）。"""

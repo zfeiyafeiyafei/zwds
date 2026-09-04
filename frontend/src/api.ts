@@ -206,14 +206,8 @@ export function listCharts(): Promise<ChartSummary[]> {
 export function getChart(chartId: number): Promise<ChartResult> {
   return request(`/charts/${chartId}`)
 }
-/** 导出命盘 JSON 快照文件：Tauri 走原生保存对话框，浏览器走 <a download> 下载。 */
-export async function exportChart(chartId: number, fallbackName: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/charts/${chartId}/export`)
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
-  const text = await res.text()
-  const m = (res.headers.get('content-disposition') ?? '').match(/filename\*=UTF-8''([^;]+)/)
-  const filename = m ? decodeURIComponent(m[1]) : `ziwei_${fallbackName}.json`
-
+/** 下载 JSON 文本为文件：Tauri 走原生保存对话框，浏览器走 <a download>。 */
+async function downloadJson(text: string, filename: string): Promise<void> {
   if (inTauri()) {
     const { save } = await import('@tauri-apps/plugin-dialog')
     const { writeTextFile } = await import('@tauri-apps/plugin-fs')
@@ -231,6 +225,26 @@ export async function exportChart(chartId: number, fallbackName: string): Promis
     a.click()
     URL.revokeObjectURL(a.href)
   }
+}
+
+/** 从响应头解析导出文件名，失败回退 fallback。 */
+function exportFilename(res: Response, fallback: string): string {
+  const m = (res.headers.get('content-disposition') ?? '').match(/filename\*=UTF-8''([^;]+)/)
+  return m ? decodeURIComponent(m[1]) : fallback
+}
+
+/** 导出命盘 JSON 快照文件。 */
+export async function exportChart(chartId: number, fallbackName: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/charts/${chartId}/export`)
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
+  await downloadJson(await res.text(), exportFilename(res, `ziwei_${fallbackName}.json`))
+}
+
+/** 导出全部命盘为单个 JSON 文件（备份/迁移）。 */
+export async function exportAllCharts(): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/charts/export-all`)
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
+  await downloadJson(await res.text(), exportFilename(res, 'ziwei_all.json'))
 }
 
 /** 将命盘 JSON 数据复制到剪贴板（Tauri 走剪贴板插件，浏览器走 navigator.clipboard）。 */

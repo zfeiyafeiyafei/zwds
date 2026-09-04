@@ -4,6 +4,7 @@ import {
   calculate,
   copyChartJson,
   deleteChart,
+  exportAllCharts,
   exportChart,
   getChart,
   importChart,
@@ -140,6 +141,15 @@ async function onExport(item: ChartSummary) {
   }
 }
 
+/** 导出全部命盘为单个 JSON 文件（备份/迁移）。 */
+async function onExportAll() {
+  try {
+    await exportAllCharts()
+  } catch (e) {
+    listError.value = e instanceof Error ? e.message : String(e)
+  }
+}
+
 async function onImportFile(file: File) {
   try {
     const snapshot = JSON.parse(await file.text())
@@ -240,6 +250,7 @@ onMounted(async () => {
         @edit="editingItem = $event"
         @remove="onDelete"
         @export="onExport"
+        @export-all="onExportAll"
       />
 
       <EditChartDialog :item="editingItem" @close="editingItem = null" @saved="onEdited" />

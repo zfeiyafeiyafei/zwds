@@ -14,6 +14,7 @@ const emit = defineEmits<{
   edit: [item: ChartSummary]
   remove: [item: ChartSummary]
   export: [item: ChartSummary]
+  exportAll: []
 }>()
 
 const query = ref('')
@@ -66,6 +67,18 @@ const filtered = computed(() => props.items.filter((it) => matchChart(it, query.
             <button type="button" class="row-btn" title="导出 JSON 文件" @click="emit('export', item)">⇩</button>
           </li>
         </ul>
+
+        <div class="dialog-foot">
+          <button
+            type="button"
+            class="export-all-btn"
+            :disabled="items.length === 0"
+            title="将全部命盘导出为单个 JSON 文件"
+            @click="emit('exportAll')"
+          >
+            ⇩ 导出全部命盘（{{ items.length }}）
+          </button>
+        </div>
       </div>
     </div>
   </Teleport>
@@ -207,5 +220,32 @@ const filtered = computed(() => props.items.filter((it) => matchChart(it, query.
   background: var(--hover-bg);
   border-color: var(--line);
   color: var(--accent);
+}
+
+.dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.export-all-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.export-all-btn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--hover-bg);
+}
+
+.export-all-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 </style>
