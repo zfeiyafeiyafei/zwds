@@ -220,6 +220,30 @@ def test_huoling_clamp_and_yangtuo_jiaji() -> None:
     assert any("化忌·命宫" in e for e in evidence)
 
 
+def test_caiyin_jiayin_off_soul_palace() -> None:
+    """1981-11-10 戌时男（辛年巨门化禄）：天相不在命宫而在官禄，
+    仍构成夹印结构；巨门落陷化禄 → 附减等注记、不作破格。"""
+    chart = calculate(BirthInput(1981, 11, 10, 10, "男"))
+    matches = {m.name: m for m in analyze_patterns(chart)}
+    evidence = matches["财荫夹印"].evidence
+    assert "天相·官禄(巳)" in evidence
+    assert "天梁·交友(午)" in evidence
+    assert "巨门化禄·田宅(辰)" in evidence
+    assert any("落陷化禄" in e and "不作破格" in e for e in evidence)
+    # 天相(得)0 + 天梁(庙)+1 + 巨门(陷)-1 = 0 → 中
+    assert matches["财荫夹印"].strength == "中"
+
+
+def test_xingji_jiayin() -> None:
+    """1977-06-01 午时女（丁年巨门化忌）：刑忌夹印；财侧有忌则财荫夹印不成立。"""
+    chart = calculate(BirthInput(1977, 6, 1, 6, "女"))
+    matches = {m.name: m for m in analyze_patterns(chart)}
+    evidence = matches["刑忌夹印"].evidence
+    assert "天相·交友(辰)" in evidence
+    assert "巨门化忌·官禄(卯)" in evidence
+    assert "财荫夹印" not in matches
+
+
 def test_special_patterns() -> None:
     """特殊结构：财荫夹印 / 刑囚夹印 / 马落空亡。"""
     chart = calculate(BirthInput(1980, 8, 1, 10, "男"))

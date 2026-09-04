@@ -13,7 +13,10 @@
 - clamp_pair 为夹命规则：两星分别坐守命宫左右邻宫。
 - soul_body_pair 为命身规则：两星分坐命宫与身宫（坐贵向贵）。
 - empty_soul 为命无正曜：命宫无十四主星。
-- special 为结构特殊的独立判定："财荫夹印"、"刑囚夹印"、"马落空亡"。
+- special 为结构特殊的独立判定："财荫夹印"、"刑忌夹印"（夹印结构）、"刑囚夹印"、"马落空亡"。
+  天府系安星顺序（…巨门→天相→天梁…）决定天相恒被巨门、天梁分夹前后邻宫，
+  故夹印结构不看是否成夹（必然成夹），只看巨门侧是化禄/禄存（财荫夹印）还是化忌（刑忌夹印）；
+  天相坐命为正格，居他宫则应在该宫事项。
 - 强弱：按命中星亮度计分（庙/旺 +1，得/利/平/无数据 0，不/陷 -1），
   ≥2 强，0~1 中，<0 弱。凶格同法计分，表示格局成色。
 """
@@ -300,11 +303,11 @@ RULES: tuple[PatternRule, ...] = (
     ),
     PatternRule(
         name="财荫夹印",
-        soul_stars=frozenset({"天相"}),
         special="财荫夹印",
         domain="财富 / 名位",
-        condition="天相坐命，兄弟宫见化禄（或禄存）、父母宫见天梁",
-        explain="财荫夹印，印星得财荫护持，主名位安稳、得上辈与平辈之力。",
+        condition="天相之前邻宫见巨门化禄（或禄存）、后邻宫见天梁；天相坐命为正格，居他宫应在该宫事项",
+        explain="财荫夹印，印（天相）得财（巨门化禄/禄存）荫（天梁）护持，主名位安稳、得上辈与平辈之力。"
+        "巨门落陷化禄不作破格：化禄可解巨门之暗，唯禄力减等、格局降等；巨门化忌则转凶，另成刑忌夹印。",
     ),
     PatternRule(
         name="坐贵向贵",
@@ -364,6 +367,14 @@ RULES: tuple[PatternRule, ...] = (
         domain="感情 / 桃花",
         condition="贪狼在亥或子宫坐命",
         explain="泛水桃花，贪狼居水乡，主情欲泛滥，须防因色破财惹非。",
+    ),
+    PatternRule(
+        name="刑忌夹印",
+        category="凶格",
+        special="刑忌夹印",
+        domain="是非 / 刑克",
+        condition="天相之前邻宫见巨门化忌（后邻必为天梁）；天相坐命为正格，居他宫应在该宫事项",
+        explain="刑忌夹印，印（天相）被巨门化忌相刑，天梁之荫反成掣肘，主是非缠身、因财起祸、文书官非，宜守不宜攻。",
     ),
     PatternRule(
         name="刑囚夹印",
@@ -496,32 +507,68 @@ def _clamp_sides(sc: _Scan, pair: tuple[str, str]) -> dict[str, _Hit] | None:
     return {name: sc.sides[pos[name]][name] for name in pair}
 
 
-def _special(name: str, sc: _Scan) -> list[str] | None:
-    """特殊结构判定，命中返回证据列表，否则 None。"""
-    if name == "财荫夹印":
-        # 天相坐命（soul_stars 已保证）；一邻宫见天梁（荫），另一邻宫见禄存或化禄星（财）
-        yin_side = next((i for i in (0, 1) if "天梁" in sc.sides[i]), None)
-        if yin_side is None:
+def _seal_clamp(sk: ChartSkeleton, kind: str) -> tuple[list[str], list[_Hit]] | None:
+    """夹印结构判定：天相恒被巨门、天梁分夹前后邻宫（天府系安星顺序）。
+
+    天相坐命为正格，居他宫则应在该宫事项；判定与命宫无关，直接定位天相所在宫。
+    - 财荫夹印：巨门侧邻宫见巨门化禄或禄存；巨门落陷化禄不作破格，附减等注记。
+    - 刑忌夹印：巨门侧邻宫见巨门化忌。
+    """
+    xiang: tuple[int, dict[str, _Hit]] | None = None
+    for branch in range(12):
+        hits = _palace_hits(sk, branch)
+        if "天相" in hits:
+            xiang = (branch, hits)
+            break
+    if xiang is None:
+        return None
+    branch, xiang_hits = xiang
+    sides = [
+        _palace_hits(sk, (branch - 1) % 12),
+        _palace_hits(sk, (branch + 1) % 12),
+    ]
+    yin_side = next((i for i in (0, 1) if "天梁" in sides[i]), None)
+    if yin_side is None:
+        return None
+    cai_side = sides[1 - yin_side]
+    base = [_ev(xiang_hits["天相"], "天相"), _ev(sides[yin_side]["天梁"], "天梁")]
+    scored = [xiang_hits["天相"], sides[yin_side]["天梁"]]
+    jumen = cai_side.get("巨门")
+    if kind == "财荫夹印":
+        # 巨门化忌在财侧则财荫被破（禄忌交战），只报刑忌夹印
+        if jumen is not None and jumen.mutagen == "忌":
             return None
-        cai_side = 1 - yin_side
-        cai = [
-            (n, h)
-            for n, h in sc.sides[cai_side].items()
-            if n == "禄存" or h.mutagen == "禄"
-        ]
+        cai = [(n, h) for n, h in cai_side.items() if n == "禄存" or h.mutagen == "禄"]
         if not cai:
             return None
-        # soul_stars 证据由主流程输出；此处只补夹宫两侧证据
-        evidence = [_ev(sc.sides[yin_side]["天梁"], "天梁")]
-        evidence.extend(_ev(h, n) for n, h in cai)
-        return evidence
+        base.extend(_ev(h, n) for n, h in cai)
+        scored.extend(h for _, h in cai)
+        if (
+            jumen is not None
+            and jumen.mutagen == "禄"
+            and jumen.brightness in ("不", "陷")
+        ):
+            base.append("巨门落陷化禄：化禄解暗、不作破格，唯禄力减等")
+        return base, scored
+    # 刑忌夹印
+    if jumen is None or jumen.mutagen != "忌":
+        return None
+    base.append(_ev(jumen, "巨门"))
+    scored.append(jumen)
+    return base, scored
+
+
+def _special(name: str, sc: _Scan, sk: ChartSkeleton) -> tuple[list[str], list[_Hit]] | None:
+    """特殊结构判定，命中返回 (证据列表, 参与强弱计分的星)，否则 None。"""
+    if name in ("财荫夹印", "刑忌夹印"):
+        return _seal_clamp(sk, name)
     if name == "刑囚夹印":
         # 廉贞、天相同宫坐命（soul_stars 已保证）；擎羊同宫或廉贞化忌
         yang = sc.soul.get("擎羊")
         if yang is None and sc.soul["廉贞"].mutagen != "忌":
             return None
         # 化忌由主流程 _ev 标注；此处只补擎羊同宫证据
-        return [_ev(yang, "擎羊")] if yang is not None else []
+        return ([_ev(yang, "擎羊")] if yang is not None else [], [])
     if name == "马落空亡":
         # 三方四正内天马与地空/地劫同宫
         tianma = sc.found.get("天马")
@@ -530,12 +577,12 @@ def _special(name: str, sc: _Scan) -> list[str] | None:
         for kong in ("地空", "地劫"):
             hit = sc.found.get(kong)
             if hit is not None and hit.branch == tianma.branch:
-                return [_ev(tianma, "天马"), _ev(hit, kong)]
+                return [_ev(tianma, "天马"), _ev(hit, kong)], []
         return None
     return None
 
 
-def _match(rule: PatternRule, sc: _Scan) -> PatternMatch | None:
+def _match(rule: PatternRule, sc: _Scan, sk: ChartSkeleton) -> PatternMatch | None:
     """按声明式字段逐条判定；全部通过返回 PatternMatch。"""
     evidence: list[str] = []
     scored: list[_Hit] = []  # 参与强弱计分的星
@@ -621,10 +668,11 @@ def _match(rule: PatternRule, sc: _Scan) -> PatternMatch | None:
         else:
             return None
     if rule.special:
-        special_evidence = _special(rule.special, sc)
-        if special_evidence is None:
+        special_result = _special(rule.special, sc, sk)
+        if special_result is None:
             return None
-        evidence.extend(special_evidence)
+        evidence.extend(special_result[0])
+        scored.extend(special_result[1])
 
     score = sum(_BRIGHT_SCORE.get(h.brightness, 0) for h in scored)
     strength = "强" if score >= 2 else ("中" if score >= 0 else "弱")
@@ -641,7 +689,7 @@ def _match(rule: PatternRule, sc: _Scan) -> PatternMatch | None:
 def detect_patterns(sk: ChartSkeleton) -> list[PatternMatch]:
     """识别命盘中成立的全部格局（三方四正 / 坐命 / 夹宫 / 命身 / 四化 / 凶格）。"""
     sc = _scan(sk)
-    return [m for rule in RULES if (m := _match(rule, sc)) is not None]
+    return [m for rule in RULES if (m := _match(rule, sc, sk)) is not None]
 
 
 def analyze_patterns(chart: NatalChart) -> list[PatternMatch]:
