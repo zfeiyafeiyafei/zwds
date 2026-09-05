@@ -67,3 +67,18 @@ async def stream_chat(
                     yield "reasoning", reasoning
                 if content:
                     yield "content", content
+
+
+
+async def list_models(base_url: str, api_key: str | None) -> list[str]:
+    """查询上游可用模型 id 列表（OpenAI 兼容 GET /models）。"""
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    url = f"{base_url.rstrip('/')}/models"
+    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+        resp = await client.get(url, headers=headers)
+        if resp.status_code != 200:
+            raise RuntimeError(f"LLM 服务返回 {resp.status_code}：{resp.text[:300]}")
+        data = resp.json()
+        return sorted(m["id"] for m in data.get("data", []) if "id" in m)

@@ -326,6 +326,14 @@ export interface ChatMessage {
   content: string
 }
 
+/** 拉取上游可用模型列表（可带未保存的 base_url/key 试连）。 */
+export function fetchModels(payload: {
+  base_url?: string
+  api_key?: string
+}): Promise<{ models: string[] }> {
+  return request('/ai/models', { method: 'POST', body: JSON.stringify(payload) })
+}
+
 /**
  * 流式对话：POST /api/ai/chat，逐段回调增量文本。
  * onDelta(text, kind)：kind 为 content（正文）或 reasoning（模型思考过程）。

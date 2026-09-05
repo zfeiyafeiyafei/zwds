@@ -277,7 +277,7 @@ from fastapi.responses import StreamingResponse
 from ziwei_engine.models import AIConfig, PromptTemplate
 from ziwei_engine.io.persist import ensure_prompt_template_builtin, seed_skills
 
-from llm import build_messages, stream_chat
+from llm import build_messages, list_models, stream_chat
 
 # 旧库补列 + 内置 skill 播种（幂等，随启动执行）
 ensure_prompt_template_builtin(_session_factory)
@@ -400,6 +400,25 @@ def put_ai_config(req: AIConfigRequest) -> dict:
             cfg.api_key = req.api_key
         session.commit()
         return {"ok": True}
+
+
+class ModelsRequest(BaseModel):
+    """拉取模型列表：可带未保存的 base_url/key 试连，缺省回落到已保存配置。"""
+
+    base_url: str | None = None
+    api_key: str | None = None
+
+
+@app.post("/api/ai/models")
+async def list_llm_models(req: ModelsRequest) -> dict:
+    with _session_factory() as session:
+        cfg = _get_config(session)
+        base_url = (req.base_url or cfg.base_url).rstrip("/")
+        api_key = req.api_key if req.api_key else cfg.api_key
+    try:
+        return {"models": await list_models(base_url, api_key)}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
 
 
 class ChatMessage(BaseModel):

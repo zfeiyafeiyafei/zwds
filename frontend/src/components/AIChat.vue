@@ -2,6 +2,13 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import type { ChartResult, ChatMessage, Skill } from '../api'
 import { listSkills, streamChat } from '../api'
+import DOMPurify from 'dompurify'
+import { marked } from 'marked'
+
+/** LLM 输出为 Markdown；marked 渲染后经 DOMPurify 消毒（内容不可信，防 XSS）。 */
+function renderMd(text: string): string {
+  return DOMPurify.sanitize(marked.parse(text, { async: false }))
+}
 
 /** AI 分析页签：skill 选择 + 流式对话（biz_requirement.md §4.4.3）。 */
 const props = defineProps<{ chart: ChartResult | null }>()
@@ -16,8 +23,8 @@ const streaming = ref(false)
 const statusText = ref('')
 const followUp = ref('')
 const threadRef = ref<HTMLElement>()
-// 对话所基于的命盘引用：切换命盘后提示重开（§4.4.3-4）
-const contextChart = ref<ChartResult | null>(null)
+// 对话所基于的命盘：以出生参数判定是否换盘（同一盘重算产生新对象引用，不能按引用比较）
+const contextChartInput = ref<string | null>(null)
 
 let abort: AbortController | null = null
 
@@ -38,7 +45,7 @@ async function scrollToEnd() {
 /** 发起一轮对话（首轮或追问），流式渲染回复。 */
 async function run(userText: string) {
   if (!props.chart || selectedSkillId.value == null || streaming.value) return
-  contextChart.value = props.chart
+  contextChartInput.value = JSON.stringify(props.chart.input)
   messages.value.push({ role: 'user', content: userText })
   const reply: UIMessage = { role: 'assistant', content: '', reasoning: '' }
   messages.value.push(reply)
@@ -100,14 +107,14 @@ function stop() {
 /** 以当前命盘重新开始对话。 */
 function restartWithCurrentChart() {
   messages.value = []
-  contextChart.value = null
+  contextChartInput.value = null
 }
-// 以出生参数判定是否换盘：同一盘重新计算会产生新对象引用，不能按引用比较
+
 const chartChanged = computed(
   () =>
-    contextChart.value != null &&
+    contextChartInput.value != null &&
     props.chart != null &&
-    JSON.stringify(contextChart.value.input) !== JSON.stringify(props.chart.input),
+    contextChartInput.value !== JSON.stringify(props.chart.input),
 )
 </script>
 
@@ -152,7 +159,9 @@ const chartChanged = computed(
             <details v-if="m.reasoning" class="reasoning">
               <summary>思考过程</summary>{{ m.reasoning }}
             </details>
-            {{ m.content }}<span
+            <div v-if="m.role === 'assistant'" class="md" v-html="renderMd(m.content)"></div>
+            <template v-else>{{ m.content }}</template>
+            <span
               v-if="streaming && i === messages.length - 1 && m.role === 'assistant'"
               class="cursor"
             >▍</span>
@@ -313,6 +322,11 @@ const chartChanged = computed(
   word-break: break-word;
 }
 
+/* Markdown 渲染区不保留 pre-wrap，交由标签语义控制换行 */
+.bubble-body .md {
+  white-space: normal;
+}
+
 .reasoning {
   margin-bottom: 8px;
   padding: 6px 10px;
@@ -327,6 +341,78 @@ const chartChanged = computed(
   color: var(--ink-soft);
   font-size: 11px;
   margin-bottom: 4px;
+}
+
+/* Markdown 内容排版 */
+.md :deep(h1),
+.md :deep(h2),
+.md :deep(h3),
+.md :deep(h4) {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.md :deep(p) {
+  margin: 6px 0;
+}
+
+.md :deep(ul),
+.md :deep(ol) {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.md :deep(li) {
+  margin: 3px 0;
+}
+
+.md :deep(strong) {
+  color: var(--ink);
+}
+
+.md :deep(code) {
+  font-size: 12px;
+  background: var(--hover-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.md :deep(pre) {
+  background: var(--hover-bg);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  overflow-x: auto;
+}
+
+.md :deep(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.md :deep(table) {
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.md :deep(th),
+.md :deep(td) {
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.md :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 10px 0;
+}
+
+.md :deep(blockquote) {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--ink-soft);
 }
 
 .cursor {
