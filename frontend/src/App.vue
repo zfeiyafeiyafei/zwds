@@ -349,7 +349,7 @@ onMounted(async () => {
   align-items: start;
 }
 
-/* 命盘区 + 右侧星曜解析栏 */
+/* 命盘区 + 格局/星曜侧栏 */
 .main-row {
   display: flex;
   gap: 12px;
@@ -360,6 +360,26 @@ onMounted(async () => {
 .chart-col {
   flex: 1;
   min-width: 0;
+}
+
+/* 窄屏（如 1080p 桌面窗口）：排盘独占首行，格局/星曜面板移到下方。
+   两面板 flex-basis 300px，空间不足时自动换行堆叠；宽屏保持三栏并排。 */
+@media (max-width: 1600px) {
+  .main-row {
+    flex-wrap: wrap;
+  }
+
+  .chart-col {
+    order: -1;
+    flex-basis: 100%;
+  }
+
+  .main-row > .pattern-panel,
+  .main-row > .detail-panel {
+    width: auto;
+    flex: 1 1 300px;
+    min-width: 0;
+  }
 }
 
 .sidebar {
