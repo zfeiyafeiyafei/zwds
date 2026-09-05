@@ -35,8 +35,8 @@ async def stream_chat(
     api_key: str | None,
     model: str,
     messages: list[dict[str, str]],
-) -> AsyncGenerator[str, None]:
-    """向上游 LLM 发起流式请求，逐条产出增量文本（delta content）。"""
+) -> AsyncGenerator[tuple[str, str], None]:
+    """向上游 LLM 发起流式请求，产出 (kind, text)：content=正文增量，reasoning=思考增量。"""
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -58,8 +58,12 @@ async def stream_chat(
                     chunk = json.loads(data)
                 except json.JSONDecodeError:
                     continue
-                delta = (
-                    chunk.get("choices", [{}])[0].get("delta", {}).get("content")
-                )
-                if delta:
-                    yield delta
+                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                content = delta.get("content")
+                reasoning = delta.get("reasoning_content")
+                # 推理模型先发 reasoning_content：中继给前端展示"思考中"，
+                # 否则长推理期间界面像无响应
+                if reasoning:
+                    yield "reasoning", reasoning
+                if content:
+                    yield "content", content

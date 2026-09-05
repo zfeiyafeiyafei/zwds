@@ -281,7 +281,7 @@ onMounted(async () => {
           AI 分析
         </button>
       </div>
-      <template v-if="view === 'chart'">
+      <div v-show="view === 'chart'">
       <div class="toolbar">
         <div class="layout-switch" role="group" aria-label="命盘布局">
         <button
@@ -362,9 +362,10 @@ onMounted(async () => {
           :center="detailCenter"
         />
       </div>
-      </template>
+      </div>
+      <!-- v-show 而非 v-if：切换页签不卸载组件，对话状态保留 -->
       <AIChat
-        v-else
+        v-show="view === 'ai'"
         ref="aiChatRef"
         :chart="chart"
         @open-settings="settingsOpen = true"

@@ -328,11 +328,12 @@ export interface ChatMessage {
 
 /**
  * 流式对话：POST /api/ai/chat，逐段回调增量文本。
- * onDelta(delta) 收到每个增量；返回完整文本；signal 用于中途停止。
+ * onDelta(text, kind)：kind 为 content（正文）或 reasoning（模型思考过程）。
+ * signal 用于中途停止。
  */
 export async function streamChat(
   payload: { skill_id: number; chart: unknown; messages: ChatMessage[] },
-  onDelta: (delta: string) => void,
+  onDelta: (text: string, kind: 'content' | 'reasoning') => void,
   signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/api/ai/chat`, {
@@ -361,7 +362,8 @@ export async function streamChat(
       if (data === '[DONE]') return
       const parsed = JSON.parse(data)
       if (parsed.error) throw new Error(parsed.error)
-      if (parsed.delta) onDelta(parsed.delta)
+      if (parsed.delta) onDelta(parsed.delta, 'content')
+      if (parsed.reasoning) onDelta(parsed.reasoning, 'reasoning')
     }
   }
 }

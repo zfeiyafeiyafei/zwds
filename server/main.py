@@ -431,8 +431,9 @@ async def ai_chat(req: AIChatRequest) -> StreamingResponse:
 
     async def event_stream():
         try:
-            async for delta in stream_chat(base_url, api_key, model, messages):
-                yield f"data: {json.dumps({'delta': delta}, ensure_ascii=False)}\n\n"
+            async for kind, text in stream_chat(base_url, api_key, model, messages):
+                payload = {"delta": text} if kind == "content" else {"reasoning": text}
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"

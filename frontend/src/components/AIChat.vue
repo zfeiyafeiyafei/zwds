@@ -7,9 +7,11 @@ import { listSkills, streamChat } from '../api'
 const props = defineProps<{ chart: ChartResult | null }>()
 const emit = defineEmits<{ openSettings: [] }>()
 
+type UIMessage = ChatMessage & { reasoning?: string }
+
 const skills = ref<Skill[]>([])
 const selectedSkillId = ref<number | null>(null)
-const messages = ref<ChatMessage[]>([])
+const messages = ref<UIMessage[]>([])
 const streaming = ref(false)
 const statusText = ref('')
 const followUp = ref('')
@@ -38,10 +40,10 @@ async function run(userText: string) {
   if (!props.chart || selectedSkillId.value == null || streaming.value) return
   contextChart.value = props.chart
   messages.value.push({ role: 'user', content: userText })
-  const reply: ChatMessage = { role: 'assistant', content: '' }
+  const reply: UIMessage = { role: 'assistant', content: '', reasoning: '' }
   messages.value.push(reply)
   streaming.value = true
-  statusText.value = '生成中…'
+  statusText.value = '连接中…'
   abort = new AbortController()
   try {
     await streamChat(
@@ -51,8 +53,15 @@ async function run(userText: string) {
         // 历史不含刚 push 的空 assistant 占位
         messages: messages.value.slice(0, -1),
       },
-      (delta) => {
-        reply.content += delta
+      (text, kind) => {
+        if (kind === 'reasoning') {
+          // 推理模型的思考过程：折叠展示，同时让"生成中"状态可见
+          reply.reasoning! += text
+          statusText.value = '思考中…'
+        } else {
+          reply.content += text
+          statusText.value = '生成中…'
+        }
         void scrollToEnd()
       },
       abort.signal,
@@ -93,9 +102,12 @@ function restartWithCurrentChart() {
   messages.value = []
   contextChart.value = null
 }
-
+// 以出生参数判定是否换盘：同一盘重新计算会产生新对象引用，不能按引用比较
 const chartChanged = computed(
-  () => contextChart.value != null && props.chart != null && contextChart.value !== props.chart,
+  () =>
+    contextChart.value != null &&
+    props.chart != null &&
+    JSON.stringify(contextChart.value.input) !== JSON.stringify(props.chart.input),
 )
 </script>
 
@@ -136,7 +148,15 @@ const chartChanged = computed(
           :class="m.role"
         >
           <div class="bubble-role">{{ m.role === 'user' ? '我' : 'AI' }}</div>
-          <div class="bubble-body">{{ m.content }}<span v-if="streaming && i === messages.length - 1 && m.role === 'assistant'" class="cursor">▍</span></div>
+          <div class="bubble-body">
+            <details v-if="m.reasoning" class="reasoning">
+              <summary>思考过程</summary>{{ m.reasoning }}
+            </details>
+            {{ m.content }}<span
+              v-if="streaming && i === messages.length - 1 && m.role === 'assistant'"
+              class="cursor"
+            >▍</span>
+          </div>
         </div>
       </div>
 
@@ -291,6 +311,22 @@ const chartChanged = computed(
   line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.reasoning {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--line-strong);
+  font-size: 12px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+}
+
+.reasoning summary {
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 11px;
+  margin-bottom: 4px;
 }
 
 .cursor {
