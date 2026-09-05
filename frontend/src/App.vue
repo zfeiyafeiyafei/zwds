@@ -11,6 +11,8 @@ import {
   listCharts,
 } from './api'
 import type { BirthPayload, ChartResult, ChartSummary } from './api'
+import AIChat from './components/AIChat.vue'
+import AISettingsDialog from './components/AISettingsDialog.vue'
 import BirthForm from './components/BirthForm.vue'
 import ChartGrid from './components/ChartGrid.vue'
 import ClockChart from './components/ClockChart.vue'
@@ -29,6 +31,12 @@ const layout = ref<LayoutKey>(
   localStorage.getItem(LAYOUT_STORAGE_KEY) === 'clock' ? 'clock' : 'grid',
 )
 watch(layout, (v) => localStorage.setItem(LAYOUT_STORAGE_KEY, v))
+
+// ---- 页签：排盘 / AI 分析（biz_requirement.md §4.4.3） ----
+type ViewKey = 'chart' | 'ai'
+const view = ref<ViewKey>('chart')
+const settingsOpen = ref(false)
+const aiChatRef = ref<InstanceType<typeof AIChat>>()
 // ---- 主题切换：localStorage 持久化，未选择时跟随系统 ----
 type ThemeKey = 'light' | 'dark'
 const THEME_STORAGE_KEY = 'zwds-theme'
@@ -257,6 +265,23 @@ onMounted(async () => {
     </aside>
 
     <main class="content">
+      <div class="view-switch" role="group" aria-label="功能页签">
+        <button
+          type="button"
+          :class="{ active: view === 'chart' }"
+          @click="view = 'chart'"
+        >
+          排盘
+        </button>
+        <button
+          type="button"
+          :class="{ active: view === 'ai' }"
+          @click="view = 'ai'"
+        >
+          AI 分析
+        </button>
+      </div>
+      <template v-if="view === 'chart'">
       <div class="toolbar">
         <div class="layout-switch" role="group" aria-label="命盘布局">
         <button
@@ -301,6 +326,7 @@ onMounted(async () => {
           >
             {{ theme === 'dark' ? '☀' : '☾' }}
           </button>
+          <button type="button" class="theme-toggle" title="AI 设置" @click="settingsOpen = true">⚙</button>
         </div>
       </div>
 
@@ -336,6 +362,19 @@ onMounted(async () => {
           :center="detailCenter"
         />
       </div>
+      </template>
+      <AIChat
+        v-else
+        ref="aiChatRef"
+        :chart="chart"
+        @open-settings="settingsOpen = true"
+      />
+
+      <AISettingsDialog
+        :open="settingsOpen"
+        @close="settingsOpen = false"
+        @changed="aiChatRef?.reloadSkills()"
+      />
     </main>
   </div>
 </template>
@@ -439,6 +478,34 @@ onMounted(async () => {
 .layout-switch button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+
+/* 功能页签：复用 layout-switch 的胶囊样式 */
+.view-switch {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 12px;
+}
+
+.view-switch button {
+  padding: 6px 22px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.view-switch button + button {
+  border-left: 1px solid var(--line);
+}
+
+.view-switch button.active {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .toolbar-right {

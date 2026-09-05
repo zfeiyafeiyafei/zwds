@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin
@@ -23,6 +23,8 @@ class PromptTemplate(Base, TimestampMixin):
     category: Mapped[Optional[str]] = mapped_column(String(32))
     template_content: Mapped[str] = mapped_column(Text, nullable=False)
     variables: Mapped[Optional[list[str]]] = mapped_column(JSON)
+    # 内置 skill：不可删除/改名（biz_requirement.md §4.4.1）
+    is_builtin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     reports: Mapped[list["AIReport"]] = relationship(back_populates="prompt_template")
 
@@ -96,3 +98,16 @@ class SyncRecord(Base):
     updated_time: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
+
+
+class AIConfig(Base):
+    """LLM API 配置（单行，id 恒为 1；biz_requirement.md §4.4.1）。"""
+
+    __tablename__ = "ai_config"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    base_url: Mapped[str] = mapped_column(
+        String(255), default="https://api.openai.com/v1", nullable=False
+    )
+    api_key: Mapped[Optional[str]] = mapped_column(String(255))
+    model: Mapped[str] = mapped_column(String(64), default="gpt-4o-mini", nullable=False)

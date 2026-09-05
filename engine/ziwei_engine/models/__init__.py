@@ -39,6 +39,7 @@ from .chart import (
     User,
 )
 from .ai import (
+    AIConfig,
     AIReport,
     AnalysisResult,
     ChartSnapshot,
@@ -73,6 +74,7 @@ __all__ = [
     "ChartShensha",
     "ChartPeriod",
     # D. AI 与同步
+    "AIConfig",
     "PromptTemplate",
     "AnalysisResult",
     "AIReport",

@@ -268,3 +268,100 @@ export function importChart(
     body: JSON.stringify({ snapshot, person_name: personName || '导入命盘' }),
   })
 }
+
+// ---------- AI 分析（biz_requirement.md §4.4） ----------
+
+export interface Skill {
+  id: number
+  name: string
+  category: string | null
+  content: string
+  is_builtin: boolean
+}
+
+export interface AIConfig {
+  base_url: string
+  model: string
+  api_key_masked: string
+  has_api_key: boolean
+}
+
+export function listSkills(): Promise<Skill[]> {
+  return request('/ai/skills')
+}
+
+export function createSkill(payload: {
+  name: string
+  content: string
+  category?: string
+}): Promise<Skill> {
+  return request('/ai/skills', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function updateSkill(
+  id: number,
+  payload: { name: string; content: string; category?: string },
+): Promise<Skill> {
+  return request(`/ai/skills/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+}
+
+export function deleteSkill(id: number): Promise<void> {
+  return request(`/ai/skills/${id}`, { method: 'DELETE' })
+}
+
+export function getAIConfig(): Promise<AIConfig> {
+  return request('/ai/config')
+}
+
+export function putAIConfig(payload: {
+  base_url: string
+  model: string
+  api_key?: string | null
+}): Promise<{ ok: boolean }> {
+  return request('/ai/config', { method: 'PUT', body: JSON.stringify(payload) })
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+/**
+ * 流式对话：POST /api/ai/chat，逐段回调增量文本。
+ * onDelta(delta) 收到每个增量；返回完整文本；signal 用于中途停止。
+ */
+export async function streamChat(
+  payload: { skill_id: number; chart: unknown; messages: ChatMessage[] },
+  onDelta: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/ai/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  if (!res.ok) {
+    throw new Error(`请求失败 ${res.status}: ${await res.text()}`)
+  }
+  const reader = res.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    // SSE 事件以空行分隔
+    const events = buffer.split('\n\n')
+    buffer = events.pop()!
+    for (const evt of events) {
+      const line = evt.split('\n').find((l) => l.startsWith('data:'))
+      if (!line) continue
+      const data = line.slice(5).trim()
+      if (data === '[DONE]') return
+      const parsed = JSON.parse(data)
+      if (parsed.error) throw new Error(parsed.error)
+      if (parsed.delta) onDelta(parsed.delta)
+    }
+  }
+}

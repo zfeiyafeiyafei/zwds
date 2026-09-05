@@ -62,6 +62,7 @@ EXPECTED_TABLES = {
     # D. AI 与同步
     "prompt_template",
     "analysis_result",
+    "ai_config",
     "ai_report",
     "chart_snapshot",
     "sync_record",

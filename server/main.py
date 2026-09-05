@@ -2,7 +2,8 @@
 
 MVP 范围：
 - POST /api/charts/calculate  无状态排盘（JSON 进 JSON 出）
-- 命盘 CRUD / 快照接口在 DB 模型就绪后接入
+- 命盘 CRUD / 快照 / 导入导出
+- AI 分析：skill CRUD、LLM 配置、流式对话代理（biz_requirement.md §4.4）
 """
 
 from __future__ import annotations
@@ -267,3 +268,173 @@ def import_chart(req: ImportChartRequest) -> dict:
     with _session_factory() as session:
         row = save_chart(session, chart, person_name=req.person_name or "导入命盘")
         return {"chart_id": row.id, "person": req.person_name}
+
+
+# ---------- AI 分析：skill 管理 / LLM 配置 / 流式对话（biz_requirement.md §4.4） ----------
+
+from fastapi.responses import StreamingResponse
+
+from ziwei_engine.models import AIConfig, PromptTemplate
+from ziwei_engine.io.persist import ensure_prompt_template_builtin, seed_skills
+
+from llm import build_messages, stream_chat
+
+# 旧库补列 + 内置 skill 播种（幂等，随启动执行）
+ensure_prompt_template_builtin(_session_factory)
+with _session_factory() as _s:
+    seed_skills(_s)
+
+
+def _skill_dict(row: PromptTemplate) -> dict:
+    return {
+        "id": row.id,
+        "name": row.name,
+        "category": row.category,
+        "content": row.template_content,
+        "is_builtin": row.is_builtin,
+    }
+
+
+@app.get("/api/ai/skills")
+def list_skills() -> list[dict]:
+    from sqlalchemy import select
+
+    with _session_factory() as session:
+        rows = session.scalars(
+            select(PromptTemplate).order_by(PromptTemplate.is_builtin.desc(), PromptTemplate.id)
+        ).all()
+        return [_skill_dict(r) for r in rows]
+
+
+class SkillRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    content: str = Field(min_length=1)
+    category: str | None = None
+
+
+@app.post("/api/ai/skills", status_code=201)
+def create_skill(req: SkillRequest) -> dict:
+    from sqlalchemy import select
+
+    with _session_factory() as session:
+        if session.scalar(select(PromptTemplate).where(PromptTemplate.name == req.name)):
+            raise HTTPException(status_code=409, detail=f"skill「{req.name}」已存在")
+        row = PromptTemplate(
+            name=req.name,
+            category=req.category or "自定义",
+            template_content=req.content,
+            is_builtin=False,
+        )
+        session.add(row)
+        session.commit()
+        return _skill_dict(row)
+
+
+@app.put("/api/ai/skills/{skill_id}")
+def update_skill(skill_id: int, req: SkillRequest) -> dict:
+    with _session_factory() as session:
+        row = session.get(PromptTemplate, skill_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="skill 不存在")
+        if row.is_builtin:
+            # 内置 skill 只读：内容随引擎版本播种刷新，要调整请新建自定义 skill
+            raise HTTPException(status_code=409, detail="内置 skill 为只读，可复制内容新建自定义 skill")
+        row.name = req.name
+        row.template_content = req.content
+        row.category = req.category or "自定义"
+        session.commit()
+        return _skill_dict(row)
+
+
+@app.delete("/api/ai/skills/{skill_id}", status_code=204)
+def delete_skill(skill_id: int) -> Response:
+    with _session_factory() as session:
+        row = session.get(PromptTemplate, skill_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="skill 不存在")
+        if row.is_builtin:
+            raise HTTPException(status_code=409, detail="内置 skill 不可删除")
+        session.delete(row)
+        session.commit()
+        return Response(status_code=204)
+
+
+def _get_config(session) -> AIConfig:
+    cfg = session.get(AIConfig, 1)
+    if cfg is None:
+        cfg = AIConfig(id=1)
+        session.add(cfg)
+        session.commit()
+    return cfg
+
+
+@app.get("/api/ai/config")
+def get_ai_config() -> dict:
+    with _session_factory() as session:
+        cfg = _get_config(session)
+        return {
+            "base_url": cfg.base_url,
+            "model": cfg.model,
+            # Key 脱敏：只回传掩码与是否存在，不回传明文
+            "api_key_masked": (cfg.api_key[:4] + "****" + cfg.api_key[-4:]) if cfg.api_key and len(cfg.api_key) > 8 else ("****" if cfg.api_key else ""),
+            "has_api_key": bool(cfg.api_key),
+        }
+
+
+class AIConfigRequest(BaseModel):
+    base_url: str = Field(min_length=1, max_length=255)
+    model: str = Field(min_length=1, max_length=64)
+    # 空字符串 = 保持原 key 不变；null = 清除
+    api_key: str | None = ""
+
+
+@app.put("/api/ai/config")
+def put_ai_config(req: AIConfigRequest) -> dict:
+    with _session_factory() as session:
+        cfg = _get_config(session)
+        cfg.base_url = req.base_url.rstrip("/")
+        cfg.model = req.model
+        if req.api_key is None:
+            cfg.api_key = None
+        elif req.api_key:
+            cfg.api_key = req.api_key
+        session.commit()
+        return {"ok": True}
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class AIChatRequest(BaseModel):
+    skill_id: int
+    chart: dict
+    messages: list[ChatMessage] = []
+
+
+@app.post("/api/ai/chat")
+async def ai_chat(req: AIChatRequest) -> StreamingResponse:
+    """流式对话：skill 提示词 + 命盘 JSON + 历史消息 → SSE 增量文本。"""
+    with _session_factory() as session:
+        skill = session.get(PromptTemplate, req.skill_id)
+        if skill is None:
+            raise HTTPException(status_code=404, detail="skill 不存在")
+        cfg = _get_config(session)
+        if not cfg.api_key:
+            raise HTTPException(status_code=400, detail="尚未配置 LLM API Key，请在设置中填写")
+        skill_prompt = skill.template_content
+        base_url, api_key, model = cfg.base_url, cfg.api_key, cfg.model
+
+    history = [m.model_dump() for m in req.messages]
+    messages = build_messages(skill_prompt, req.chart, history)
+
+    async def event_stream():
+        try:
+            async for delta in stream_chat(base_url, api_key, model, messages):
+                yield f"data: {json.dumps({'delta': delta}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")

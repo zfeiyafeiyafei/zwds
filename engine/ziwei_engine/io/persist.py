@@ -14,6 +14,7 @@ from pathlib import Path
 from sqlalchemy import create_engine, delete, func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from ..ai import BUILTIN_SKILLS
 from ..chart.natal import NatalChart
 from ..constants import EARTHLY_BRANCHES, HEAVENLY_STEMS, PALACE_NAME_ALIASES, PALACE_NAMES
 from ..models import (
@@ -28,6 +29,7 @@ from ..models import (
     PalaceDefinition,
     PatternDefinition,
     Person,
+    PromptTemplate,
     RulePackage,
     School,
     Star,
@@ -80,6 +82,25 @@ def seed_base(session: Session) -> RulePackage:
     _seed_patterns(session, package)
     session.commit()
     return package
+
+
+def seed_skills(session: Session) -> None:
+    """播种内置 AI skill（按名幂等更新内容；用户改过名的内置行视为自定义保留）。"""
+    for item in BUILTIN_SKILLS:
+        row = session.scalar(select(PromptTemplate).where(PromptTemplate.name == item["name"]))
+        if row is None:
+            session.add(
+                PromptTemplate(
+                    name=item["name"],
+                    category="内置",
+                    template_content=item["content"],
+                    is_builtin=True,
+                )
+            )
+        elif row.is_builtin:
+            # 内置 skill 内容以引擎版本为准刷新，用户自定义内容不动
+            row.template_content = item["content"]
+    session.commit()
 
 
 def _pattern_condition_json(rule: PatternRule) -> dict:
@@ -450,6 +471,20 @@ def backfill_hour_index(session_factory: sessionmaker) -> None:
         if dirty:
             session.commit()
 
+
+
+def ensure_prompt_template_builtin(session_factory: sessionmaker) -> None:
+    """旧库补列：prompt_template.is_builtin（create_all 不会 ALTER 旧表）。"""
+    engine = session_factory.kw["bind"]
+    with engine.connect() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(prompt_template)"))}
+        if "is_builtin" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE prompt_template ADD COLUMN is_builtin BOOLEAN NOT NULL DEFAULT 0"
+                )
+            )
+            conn.commit()
 
 def load_snapshot(session: Session, chart_id: int) -> dict:
     """读取最新快照 JSON。"""
