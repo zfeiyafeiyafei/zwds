@@ -334,6 +334,18 @@ export function fetchModels(payload: {
   return request('/ai/models', { method: 'POST', body: JSON.stringify(payload) })
 }
 
+/** 按命盘读取对话历史（§4.4.3：历史 by 命盘）。 */
+export function getAIHistory(
+  chartKey: string,
+): Promise<{ id: number; role: 'user' | 'assistant'; content: string; reasoning: string | null; skill_id: number | null }[]> {
+  return request(`/ai/history?chart_key=${encodeURIComponent(chartKey)}`)
+}
+
+/** 清空某命盘的对话线程。 */
+export function clearAIHistory(chartKey: string): Promise<void> {
+  return request(`/ai/history?chart_key=${encodeURIComponent(chartKey)}`, { method: 'DELETE' })
+}
+
 /**
  * 流式对话：POST /api/ai/chat，逐段回调增量文本。
  * onDelta(text, kind)：kind 为 content（正文）或 reasoning（模型思考过程）。

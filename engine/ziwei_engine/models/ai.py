@@ -111,3 +111,21 @@ class AIConfig(Base):
     )
     api_key: Mapped[Optional[str]] = mapped_column(String(255))
     model: Mapped[str] = mapped_column(String(64), default="gpt-4o-mini", nullable=False)
+
+
+class AIMessage(Base, TimestampMixin):
+    """AI 对话消息：按命盘（chart_key）分线程持久化（biz_requirement.md §4.4.3）。
+
+    chart_key = "solar_date|hour_index|gender"，与命盘是否落库无关。
+    """
+
+    __tablename__ = "ai_message"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chart_key: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
+    skill_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("prompt_template.id"), index=True
+    )
+    role: Mapped[str] = mapped_column(String(16), nullable=False)  # user / assistant
+    content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    reasoning: Mapped[Optional[str]] = mapped_column(Text)

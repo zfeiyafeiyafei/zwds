@@ -274,7 +274,7 @@ def import_chart(req: ImportChartRequest) -> dict:
 
 from fastapi.responses import StreamingResponse
 
-from ziwei_engine.models import AIConfig, PromptTemplate
+from ziwei_engine.models import AIConfig, AIMessage, PromptTemplate
 from ziwei_engine.io.persist import ensure_prompt_template_builtin, seed_skills
 
 from llm import build_messages, list_models, stream_chat
@@ -432,9 +432,53 @@ class AIChatRequest(BaseModel):
     messages: list[ChatMessage] = []
 
 
+def _chart_key(chart: dict) -> str:
+    """命盘线程键：出生参数三元组，与命盘是否落库无关。"""
+    inp = chart.get("input", {})
+    return f"{inp.get('solar_date')}|{inp.get('hour_index')}|{inp.get('gender')}"
+
+
+def _message_dict(row: AIMessage) -> dict:
+    return {
+        "id": row.id,
+        "role": row.role,
+        "content": row.content,
+        "reasoning": row.reasoning,
+        "skill_id": row.skill_id,
+    }
+
+
+@app.get("/api/ai/history")
+def get_ai_history(chart_key: str) -> list[dict]:
+    """按命盘读取对话历史（§4.4.3：历史 by 命盘展示）。"""
+    from sqlalchemy import select
+
+    with _session_factory() as session:
+        rows = session.scalars(
+            select(AIMessage)
+            .where(AIMessage.chart_key == chart_key)
+            .order_by(AIMessage.id)
+        ).all()
+        return [_message_dict(r) for r in rows]
+
+
+@app.delete("/api/ai/history", status_code=204)
+def clear_ai_history(chart_key: str) -> Response:
+    """清空某命盘的对话线程。"""
+    from sqlalchemy import delete as sql_delete
+
+    with _session_factory() as session:
+        session.execute(sql_delete(AIMessage).where(AIMessage.chart_key == chart_key))
+        session.commit()
+        return Response(status_code=204)
+
+
 @app.post("/api/ai/chat")
 async def ai_chat(req: AIChatRequest) -> StreamingResponse:
-    """流式对话：skill 提示词 + 命盘 JSON + 历史消息 → SSE 增量文本。"""
+    """流式对话：skill 提示词 + 命盘 JSON + 历史消息 → SSE 增量文本。
+
+    完成后将本轮 user/assistant 消息按 chart_key 落库（中止也保存部分回复）。
+    """
     with _session_factory() as session:
         skill = session.get(PromptTemplate, req.skill_id)
         if skill is None:
@@ -445,16 +489,44 @@ async def ai_chat(req: AIChatRequest) -> StreamingResponse:
         skill_prompt = skill.template_content
         base_url, api_key, model = cfg.base_url, cfg.api_key, cfg.model
 
+    chart_key = _chart_key(req.chart)
+    user_text = req.messages[-1].content if req.messages else ""
     history = [m.model_dump() for m in req.messages]
     messages = build_messages(skill_prompt, req.chart, history)
 
     async def event_stream():
+        content_parts: list[str] = []
+        reasoning_parts: list[str] = []
         try:
             async for kind, text in stream_chat(base_url, api_key, model, messages):
-                payload = {"delta": text} if kind == "content" else {"reasoning": text}
+                if kind == "content":
+                    content_parts.append(text)
+                    payload = {"delta": text}
+                else:
+                    reasoning_parts.append(text)
+                    payload = {"reasoning": text}
                 yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+        finally:
+            # 先落库再发 [DONE]：客户端断开（中止）时 finally 仍执行，保存部分回复
+            if user_text or content_parts:
+                with _session_factory() as session:
+                    if user_text:
+                        session.add(
+                            AIMessage(chart_key=chart_key, skill_id=req.skill_id, role="user", content=user_text)
+                        )
+                    if content_parts:
+                        session.add(
+                            AIMessage(
+                                chart_key=chart_key,
+                                skill_id=req.skill_id,
+                                role="assistant",
+                                content="".join(content_parts),
+                                reasoning="".join(reasoning_parts) or None,
+                            )
+                        )
+                    session.commit()
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

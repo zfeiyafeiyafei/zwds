@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { ChartResult, ChatMessage, Skill } from '../api'
-import { listSkills, streamChat } from '../api'
+import { clearAIHistory, getAIHistory, listSkills, streamChat } from '../api'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 
@@ -23,8 +23,12 @@ const streaming = ref(false)
 const statusText = ref('')
 const followUp = ref('')
 const threadRef = ref<HTMLElement>()
-// 对话所基于的命盘：以出生参数判定是否换盘（同一盘重算产生新对象引用，不能按引用比较）
-const contextChartInput = ref<string | null>(null)
+
+/** 命盘线程键：出生参数三元组，与服务端 _chart_key 对齐。 */
+const chartKey = computed(() => {
+  const inp = props.chart?.input
+  return inp ? `${inp.solar_date}|${inp.hour_index}|${inp.gender}` : null
+})
 
 let abort: AbortController | null = null
 
@@ -37,6 +41,38 @@ async function reloadSkills() {
 defineExpose({ reloadSkills })
 onMounted(reloadSkills)
 
+/** 切换命盘：中止当前流，加载该命盘的对话线程（§4.4.3：历史 by 命盘）。 */
+async function loadHistory() {
+  abort?.abort()
+  if (!chartKey.value) {
+    messages.value = []
+    return
+  }
+  try {
+    const rows = await getAIHistory(chartKey.value)
+    messages.value = rows.map((r) => ({
+      role: r.role,
+      content: r.content,
+      reasoning: r.reasoning ?? undefined,
+    }))
+    if (rows.length && selectedSkillId.value == null && rows[0].skill_id) {
+      selectedSkillId.value = rows[0].skill_id
+    }
+  } catch {
+    messages.value = []
+  }
+}
+
+/** 清空当前命盘的对话线程。 */
+async function clearThread() {
+  if (!chartKey.value || !window.confirm('清空当前命盘的 AI 对话记录？')) return
+  abort?.abort()
+  await clearAIHistory(chartKey.value)
+  messages.value = []
+}
+
+watch(chartKey, () => void loadHistory(), { immediate: true })
+
 async function scrollToEnd() {
   await nextTick()
   threadRef.value?.scrollTo({ top: threadRef.value.scrollHeight })
@@ -45,7 +81,6 @@ async function scrollToEnd() {
 /** 发起一轮对话（首轮或追问），流式渲染回复。 */
 async function run(userText: string) {
   if (!props.chart || selectedSkillId.value == null || streaming.value) return
-  contextChartInput.value = JSON.stringify(props.chart.input)
   messages.value.push({ role: 'user', content: userText })
   const reply: UIMessage = { role: 'assistant', content: '', reasoning: '' }
   messages.value.push(reply)
@@ -104,18 +139,6 @@ function stop() {
   abort?.abort()
 }
 
-/** 以当前命盘重新开始对话。 */
-function restartWithCurrentChart() {
-  messages.value = []
-  contextChartInput.value = null
-}
-
-const chartChanged = computed(
-  () =>
-    contextChartInput.value != null &&
-    props.chart != null &&
-    contextChartInput.value !== JSON.stringify(props.chart.input),
-)
 </script>
 
 <template>
@@ -135,16 +158,22 @@ const chartChanged = computed(
         开始分析
       </button>
       <button type="button" class="row-btn" title="AI 设置" @click="emit('openSettings')">⚙ 设置</button>
+      <button
+        v-if="messages.length"
+        type="button"
+        class="row-btn"
+        title="清空当前命盘的对话记录"
+        :disabled="streaming"
+        @click="clearThread"
+      >
+        清空
+      </button>
       <span v-if="statusText" class="status">{{ statusText }}</span>
     </div>
 
     <p v-if="!chart" class="empty">请先在「排盘」页签生成命盘。</p>
 
     <template v-else>
-      <p v-if="chartChanged" class="notice">
-        当前对话基于先前的命盘。
-        <button type="button" class="link-btn" @click="restartWithCurrentChart">以新命盘重新开始</button>
-      </p>
 
       <div ref="threadRef" class="thread">
         <p v-if="messages.length === 0" class="empty">选择 skill 后点击「开始分析」，命盘 JSON 会自动附加给 AI。</p>

@@ -63,6 +63,7 @@ EXPECTED_TABLES = {
     "prompt_template",
     "analysis_result",
     "ai_config",
+    "ai_message",
     "ai_report",
     "chart_snapshot",
     "sync_record",
