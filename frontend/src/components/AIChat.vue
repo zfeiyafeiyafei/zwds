@@ -10,8 +10,8 @@ function renderMd(text: string): string {
   return DOMPurify.sanitize(marked.parse(text, { async: false }))
 }
 
-/** AI 分析页签：skill 选择 + 流式对话（biz_requirement.md §4.4.3）。 */
-const props = defineProps<{ chart: ChartResult | null }>()
+/** AI 分析工作台：skill chips + 流式对话（ui_design.md §5，biz_requirement.md §4.4.3）。 */
+const props = defineProps<{ chart: ChartResult | null; personName: string }>()
 const emit = defineEmits<{ openSettings: [] }>()
 
 type UIMessage = ChatMessage & { reasoning?: string }
@@ -41,7 +41,7 @@ async function reloadSkills() {
 defineExpose({ reloadSkills })
 onMounted(reloadSkills)
 
-/** 切换命盘：中止当前流，加载该命盘的对话线程（§4.4.3：历史 by 命盘）。 */
+/** 切换命盘：中止当前流，加载该命盘的对话线程（历史 by 命盘）。 */
 async function loadHistory() {
   abort?.abort()
   if (!chartKey.value) {
@@ -55,13 +55,14 @@ async function loadHistory() {
       content: r.content,
       reasoning: r.reasoning ?? undefined,
     }))
-    if (rows.length && selectedSkillId.value == null && rows[0].skill_id) {
-      selectedSkillId.value = rows[0].skill_id
-    }
+    const lastSkill = [...rows].reverse().find((r) => r.skill_id != null)?.skill_id
+    if (lastSkill != null) selectedSkillId.value = lastSkill
   } catch {
     messages.value = []
   }
 }
+
+watch(chartKey, () => void loadHistory(), { immediate: true })
 
 /** 清空当前命盘的对话线程。 */
 async function clearThread() {
@@ -71,16 +72,15 @@ async function clearThread() {
   messages.value = []
 }
 
-watch(chartKey, () => void loadHistory(), { immediate: true })
-
 async function scrollToEnd() {
   await nextTick()
   threadRef.value?.scrollTo({ top: threadRef.value.scrollHeight })
 }
 
 /** 发起一轮对话（首轮或追问），流式渲染回复。 */
-async function run(userText: string) {
-  if (!props.chart || selectedSkillId.value == null || streaming.value) return
+async function run(userText: string, skillId: number) {
+  if (!props.chart || streaming.value) return
+  selectedSkillId.value = skillId
   messages.value.push({ role: 'user', content: userText })
   const reply: UIMessage = { role: 'assistant', content: '', reasoning: '' }
   messages.value.push(reply)
@@ -90,7 +90,7 @@ async function run(userText: string) {
   try {
     await streamChat(
       {
-        skill_id: selectedSkillId.value,
+        skill_id: skillId,
         chart: props.chart,
         // 历史不含刚 push 的空 assistant 占位
         messages: messages.value.slice(0, -1),
@@ -120,80 +120,85 @@ async function run(userText: string) {
   }
 }
 
-/** 选中 skill：发起首轮分析。 */
-function onPickSkill() {
-  if (selectedSkillId.value == null) return
-  const skill = skills.value.find((s) => s.id === selectedSkillId.value)
-  messages.value = []
-  void run(`请对此命盘进行「${skill?.name ?? ''}」。`)
+/** 点击 skill chip：追加一轮该 skill 的分析（不清空线程，历史持久化在服务端）。 */
+function runSkill(skill: Skill) {
+  void run(`请对此命盘进行「${skill.name}」。`, skill.id)
 }
 
 function sendFollowUp() {
   const text = followUp.value.trim()
-  if (!text) return
+  if (!text || selectedSkillId.value == null) return
   followUp.value = ''
-  void run(text)
+  void run(text, selectedSkillId.value)
 }
 
 function stop() {
   abort?.abort()
 }
-
 </script>
 
 <template>
   <div class="ai-panel">
-    <div class="ai-toolbar">
-      <select v-model="selectedSkillId" class="skill-select" :disabled="streaming" aria-label="选择分析 skill">
-        <option v-for="s in skills" :key="s.id" :value="s.id">
-          {{ s.name }}{{ s.is_builtin ? '' : '（自定义）' }}
-        </option>
-      </select>
-      <button
-        type="button"
-        class="primary-btn"
-        :disabled="!chart || selectedSkillId == null || streaming"
-        @click="onPickSkill"
-      >
-        开始分析
-      </button>
-      <button type="button" class="row-btn" title="AI 设置" @click="emit('openSettings')">⚙ 设置</button>
+    <div class="session-head">
+      <span v-if="chart" class="chart-chip" :title="chart.input.solar_date">
+        {{ personName || '未命名' }} · {{ chart.input.solar_date }} · {{ chart.input.gender }}
+      </span>
+      <span v-else class="chart-chip empty-chip">未选择命盘</span>
+      <span class="spacer"></span>
       <button
         v-if="messages.length"
         type="button"
-        class="row-btn"
+        class="btn"
         title="清空当前命盘的对话记录"
         :disabled="streaming"
         @click="clearThread"
       >
         清空
       </button>
-      <span v-if="statusText" class="status">{{ statusText }}</span>
+      <button type="button" class="btn btn-icon" title="AI 设置" @click="emit('openSettings')">⚙</button>
     </div>
 
-    <p v-if="!chart" class="empty">请先在「排盘」页签生成命盘。</p>
+    <div v-if="skills.length" class="skill-chips" role="group" aria-label="分析 skill">
+      <button
+        v-for="s in skills"
+        :key="s.id"
+        type="button"
+        class="chip"
+        :class="{ active: s.id === selectedSkillId, custom: !s.is_builtin }"
+        :disabled="!chart || streaming"
+        :title="s.is_builtin ? s.name : `${s.name}（自定义）`"
+        @click="runSkill(s)"
+      >
+        {{ s.name }}
+      </button>
+    </div>
+
+    <p v-if="!chart" class="empty">请先在「排盘」工作台生成命盘。</p>
 
     <template v-else>
-
       <div ref="threadRef" class="thread">
-        <p v-if="messages.length === 0" class="empty">选择 skill 后点击「开始分析」，命盘 JSON 会自动附加给 AI。</p>
-        <div
-          v-for="(m, i) in messages"
-          :key="i"
-          class="bubble"
-          :class="m.role"
-        >
-          <div class="bubble-role">{{ m.role === 'user' ? '我' : 'AI' }}</div>
-          <div class="bubble-body">
-            <details v-if="m.reasoning" class="reasoning">
-              <summary>思考过程</summary>{{ m.reasoning }}
-            </details>
-            <div v-if="m.role === 'assistant'" class="md" v-html="renderMd(m.content)"></div>
-            <template v-else>{{ m.content }}</template>
-            <span
-              v-if="streaming && i === messages.length - 1 && m.role === 'assistant'"
-              class="cursor"
-            >▍</span>
+        <div class="thread-inner">
+          <p v-if="messages.length === 0" class="empty">
+            点击上方 skill 开始分析，命盘 JSON 会自动附加给 AI。
+          </p>
+          <div
+            v-for="(m, i) in messages"
+            :key="i"
+            class="bubble"
+            :class="m.role"
+          >
+            <div class="bubble-role">{{ m.role === 'user' ? '我' : 'AI' }}</div>
+            <div class="bubble-body">
+              <details v-if="m.reasoning" class="reasoning">
+                <summary>思考过程</summary>{{ m.reasoning }}
+              </details>
+              <div v-if="m.role === 'assistant'" class="md" v-html="renderMd(m.content)"></div>
+              <template v-else>{{ m.content }}</template>
+              <span
+                v-if="streaming && i === messages.length - 1 && m.role === 'assistant'"
+                class="cursor"
+              >▍</span>
+            </div>
           </div>
         </div>
       </div>
@@ -202,21 +207,22 @@ function stop() {
         <textarea
           v-model="followUp"
           rows="2"
-          placeholder="追问：如「今年适合换工作吗？」"
+          placeholder="追问：如「今年适合换工作吗？」（Enter 发送，Shift+Enter 换行）"
           :disabled="streaming || messages.length === 0"
           @keydown.enter.exact.prevent="sendFollowUp"
         ></textarea>
-        <button v-if="streaming" type="button" class="row-btn" @click="stop">停止</button>
+        <button v-if="streaming" type="button" class="btn" @click="stop">停止</button>
         <button
           v-else
           type="button"
-          class="primary-btn"
+          class="btn btn-primary"
           :disabled="!followUp.trim() || messages.length === 0"
           @click="sendFollowUp"
         >
           发送
         </button>
       </div>
+      <span v-if="statusText" class="status">{{ statusText }}</span>
     </template>
   </div>
 </template>
@@ -226,91 +232,95 @@ function stop() {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: calc(100vh - 150px);
+  height: calc(100vh - 32px);
   min-height: 420px;
 }
 
-.ai-toolbar {
+.session-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.chart-chip {
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 14px;
+  white-space: nowrap;
+}
+
+.empty-chip {
+  color: var(--ink-faint);
+}
+
+/* skill chips：比下拉少一次点击，全部可见（ui_design.md §5） */
+.skill-chips {
+  display: flex;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.skill-select {
-  padding: 6px 10px;
-  font-size: 13px;
-  background: var(--input-bg);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  min-width: 160px;
-}
-
-.primary-btn {
-  padding: 6px 16px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 13px;
-}
-
-.primary-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.row-btn {
-  padding: 6px 12px;
+.chip {
+  padding: 5px 14px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background: var(--panel);
   color: var(--ink-soft);
   font-size: 13px;
 }
 
-.row-btn:hover {
+.chip:hover {
   color: var(--accent);
   border-color: var(--accent);
   background: var(--hover-bg);
 }
 
+.chip.active {
+  background: var(--chip-accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.chip.custom {
+  border-style: dashed;
+}
+
+.chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .status {
   font-size: 12px;
   color: var(--accent);
-}
-
-.notice {
-  margin: 0;
-  font-size: 12px;
-  color: var(--ink-soft);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  background: var(--panel);
-}
-
-.link-btn {
-  border: none;
-  background: transparent;
-  color: var(--accent);
-  font-size: 12px;
-  padding: 0 4px;
-  text-decoration: underline;
+  align-self: center;
 }
 
 .thread {
   flex: 1;
   overflow-y: auto;
   scrollbar-width: thin;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel);
+}
+
+/* 对话流 760px 居中，避免长行阅读疲劳（§5-3） */
+.thread-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .empty {
@@ -322,7 +332,7 @@ function stop() {
 }
 
 .bubble {
-  max-width: 82%;
+  max-width: 92%;
   padding: 10px 14px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
@@ -459,6 +469,9 @@ function stop() {
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .composer textarea {
