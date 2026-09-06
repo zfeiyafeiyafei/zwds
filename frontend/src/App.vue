@@ -327,8 +327,14 @@ onMounted(async () => {
                   ◔
                 </button>
               </div>
-              <button v-if="chart" type="button" class="btn" @click="onCopyJson">
-                {{ copyHint || '复制 JSON' }}
+              <button
+                v-if="chart"
+                type="button"
+                class="btn btn-icon"
+                :title="copyHint || '复制 JSON'"
+                @click="onCopyJson"
+              >
+                {{ copyHint ? '✓' : '⧉' }}
               </button>
               <button
                 type="button"
@@ -461,11 +467,10 @@ onMounted(async () => {
 
 .card-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--line);
   /* 页面滚动时保持可见（运限导航 / 布局 / 导出都在这里） */
   position: sticky;
@@ -488,10 +493,12 @@ onMounted(async () => {
 }
 
 .card-actions {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .chart-canvas {
