@@ -16,3 +16,4 @@ data/*.sqlite
 
 # 系统
 .DS_Store
+data/server.log

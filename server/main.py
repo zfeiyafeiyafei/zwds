@@ -8,6 +8,8 @@ MVP 范围：
 
 from __future__ import annotations
 
+import logging
+import time
 from datetime import date
 
 from fastapi import FastAPI, HTTPException, Response
@@ -105,6 +107,14 @@ from ziwei_engine.models import Chart, Person
 
 _DB_PATH = Path(os.environ.get("ZIWEI_DB", Path(__file__).resolve().parent.parent / "data" / "ziwei.sqlite"))
 _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+# 异常日志：LLM 调用等网络错误的完整堆栈写入 data/server.log，便于事后定位
+_LOG_PATH = _DB_PATH.parent / "server.log"
+_log_handler = logging.FileHandler(_LOG_PATH, encoding="utf-8")
+_log_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+logger = logging.getLogger("zwds")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    logger.addHandler(_log_handler)
 _session_factory = make_session_factory(_DB_PATH)
 # 旧库迁移（幂等，每次启动执行）：补列 → 宫名迁移 → 时辰回填
 ensure_chart_hour_index(_session_factory)
@@ -418,6 +428,7 @@ async def list_llm_models(req: ModelsRequest) -> dict:
     try:
         return {"models": await list_models(base_url, api_key)}
     except Exception as e:
+        logger.exception("ai/models 失败: base_url=%s", base_url)
         raise HTTPException(status_code=502, detail=str(e)) from e
 
 
@@ -494,9 +505,16 @@ async def ai_chat(req: AIChatRequest) -> StreamingResponse:
     history = [m.model_dump() for m in req.messages]
     messages = build_messages(skill_prompt, req.chart, history)
 
+    upload_bytes = len(json.dumps(messages, ensure_ascii=False).encode())
+    logger.info(
+        "ai/chat 开始: model=%s base_url=%s 上传=%dB 历史=%d条 skill=%s",
+        model, base_url, upload_bytes, len(history), req.skill_id,
+    )
+
     async def event_stream():
         content_parts: list[str] = []
         reasoning_parts: list[str] = []
+        t0 = time.monotonic()
         try:
             async for kind, text in stream_chat(base_url, api_key, model, messages):
                 if kind == "content":
@@ -507,6 +525,10 @@ async def ai_chat(req: AIChatRequest) -> StreamingResponse:
                     payload = {"reasoning": text}
                 yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
         except Exception as e:
+            logger.exception(
+                "ai/chat 失败: model=%s base_url=%s 上传=%dB 已收正文=%d字 耗时=%.1fs",
+                model, base_url, upload_bytes, sum(map(len, content_parts)), time.monotonic() - t0,
+            )
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
         finally:
             # 先落库再发 [DONE]：客户端断开（中止）时 finally 仍执行，保存部分回复
